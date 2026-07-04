@@ -123,6 +123,43 @@ main { padding: 14px; }
 }
 .field input:focus { outline: none; border-color: var(--accent); }
 
+.entry-head {
+  display: grid;
+  grid-template-columns: 28px 1.2fr 1fr;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+.entry-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.entry-row {
+  display: grid;
+  grid-template-columns: 28px 1.2fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.entry-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+  justify-self: center;
+}
+.entry-row input[type="date"],
+.entry-row input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 10px;
+  font-size: 16px;
+  background: var(--card-2);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+}
+.entry-row input:focus { outline: none; border-color: var(--accent); }
+
+.btn-block { display: block; width: 100%; margin-top: 10px; margin-bottom: 12px; }
+
 .actions { display: flex; gap: 10px; }
 .btn-primary {
   flex: 1;

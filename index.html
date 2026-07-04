@@ -37,6 +37,7 @@
           <input type="file" id="file-input" accept="image/*" />
           <span>📷 スクショを選ぶ</span>
         </label>
+        <button id="manual-btn" class="btn-ghost btn-block">✏️ 手動で入力する</button>
 
         <div id="preview-wrap" class="preview-wrap" hidden>
           <img id="preview" alt="プレビュー" />
@@ -56,15 +57,10 @@
 
       <div id="confirm-card" class="card" hidden>
         <h2>確認して保存</h2>
-        <p class="hint">読み取り結果を確認・修正してください。間違っていたら直せます。</p>
-        <div class="field">
-          <label for="in-date">日付</label>
-          <input type="date" id="in-date" />
-        </div>
-        <div class="field">
-          <label for="in-weight">体重 (kg)</label>
-          <input type="number" id="in-weight" step="0.1" inputmode="decimal" placeholder="65.4" />
-        </div>
+        <p class="hint">読み取り結果を確認・修正してください。複数見つかった場合は、保存したい記録にチェックを入れてください。</p>
+        <div class="entry-head"><span></span><span>日付</span><span>体重 (kg)</span></div>
+        <div id="entry-rows" class="entry-rows"></div>
+        <button id="add-row-btn" class="btn-ghost btn-block">＋ 行を追加</button>
         <div class="actions">
           <button id="save-btn" class="btn-primary">保存</button>
           <button id="clear-btn" class="btn-ghost">クリア</button>
@@ -119,6 +115,7 @@
 
   <script src="vendor/chart.umd.js"></script>
   <script src="vendor/tesseract.min.js"></script>
+  <script src="js/parse.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

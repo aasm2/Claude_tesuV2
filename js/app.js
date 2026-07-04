@@ -99,104 +99,78 @@ fileInput.addEventListener('change', async (e) => {
     ocrRaw.textContent = text;
     ocrRawWrap.hidden = false;
 
-    const parsed = parseOcr(text);
-    showConfirm(parsed.date, parsed.weight);
-    ocrStatusText.textContent = '読み取り完了。確認してください。';
+    const entries = OcrParse.parseOcrText(text);
+    showConfirm(entries);
+    ocrStatusText.textContent = entries.length > 1
+      ? `${entries.length}件の記録が見つかりました。確認してください。`
+      : '読み取り完了。確認してください。';
     ocrProgress.style.width = '100%';
   } catch (err) {
     console.error(err);
     ocrStatusText.textContent = '読み取りに失敗しました。手動で入力してください。';
-    showConfirm(todayISO(), '');
+    showConfirm([{ date: todayISO(), weight: '' }]);
   }
 });
 
-/**
- * OCRテキストから日付と体重を推定する。
- * ヘルスケア／体組成計アプリ向け。失敗してもユーザーが手で直せる前提。
- */
-function parseOcr(text) {
-  return { date: extractDate(text) || todayISO(), weight: extractWeight(text) };
-}
-
-function extractWeight(text) {
-  // 「体重 65.4 kg」「65.4kg」「Weight 65.4」などを優先的に拾う
-  // O/o は数字に隣接していれば 0 の誤読とみなして補正する
-  const cleaned = text.replace(/[，]/g, '.').replace(/(?<=\d)[Oo]|[Oo](?=[\d.])/g, '0');
-  const candidates = [];
-
-  const reKg = /(\d{2,3}[.,]\d)\s*(?:kg|キロ|ｋｇ)/gi;
-  let m;
-  while ((m = reKg.exec(cleaned)) !== null) {
-    candidates.push(parseFloat(m[1].replace(',', '.')));
-  }
-
-  if (candidates.length === 0) {
-    const reLabel = /(?:体重|weight|たいじゅう)\D{0,6}(\d{2,3}[.,]\d)/gi;
-    while ((m = reLabel.exec(cleaned)) !== null) {
-      candidates.push(parseFloat(m[1].replace(',', '.')));
-    }
-  }
-
-  if (candidates.length === 0) {
-    // 妥当な体重レンジ(20〜200kg)の小数を拾う
-    const reNum = /\b(\d{2,3}[.,]\d)\b/g;
-    while ((m = reNum.exec(cleaned)) !== null) {
-      const v = parseFloat(m[1].replace(',', '.'));
-      if (v >= 20 && v <= 200) candidates.push(v);
-    }
-  }
-
-  const valid = candidates.filter((v) => v >= 20 && v <= 200);
-  return valid.length ? valid[0] : '';
-}
-
-function extractDate(text) {
-  // 2026/06/27, 2026-06-27, 2026年6月27日, 6月27日, 6/27
-  let m = text.match(/(20\d{2})\s*[\/\-.年]\s*(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})/);
-  if (m) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
-
-  m = text.match(/(\d{1,2})\s*[\/月]\s*(\d{1,2})\s*日?/);
-  if (m) {
-    const now = new Date();
-    let year = now.getFullYear();
-    const mm = +m[1];
-    const dd = +m[2];
-    if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
-      // 未来日になるなら前年とみなす
-      const guess = new Date(year, mm - 1, dd);
-      if (guess > now) year -= 1;
-      return `${year}-${pad(mm)}-${pad(dd)}`;
-    }
-  }
-  return '';
-}
-
 /* ---------------- 確認・保存 ---------------- */
-const inDate = $('#in-date');
-const inWeight = $('#in-weight');
+const entryRows = $('#entry-rows');
 const saveMsg = $('#save-msg');
 
-function showConfirm(date, weight) {
+function showConfirm(entries) {
   confirmCard.hidden = false;
-  inDate.value = date;
-  inWeight.value = weight === '' ? '' : weight;
+  entryRows.innerHTML = '';
+  entries.forEach((e) => entryRows.appendChild(buildRow(e.date, e.weight)));
   saveMsg.hidden = true;
   confirmCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function buildRow(date, weight) {
+  const row = document.createElement('div');
+  row.className = 'entry-row';
+  row.innerHTML = `
+    <input type="checkbox" checked aria-label="この記録を保存する" />
+    <input type="date" value="${date}" />
+    <input type="number" step="0.1" inputmode="decimal" placeholder="65.4" value="${weight === '' ? '' : weight}" />
+  `;
+  return row;
+}
+
+$('#manual-btn').addEventListener('click', () => {
+  showConfirm([{ date: todayISO(), weight: '' }]);
+});
+
+$('#add-row-btn').addEventListener('click', () => {
+  entryRows.appendChild(buildRow(todayISO(), ''));
+});
+
 $('#save-btn').addEventListener('click', () => {
-  const date = inDate.value;
-  const weight = parseFloat(inWeight.value);
-  if (!date) {
-    flash('日付を入力してください', 'var(--danger)');
+  const rows = [...entryRows.querySelectorAll('.entry-row')]
+    .filter((r) => r.querySelector('input[type=checkbox]').checked);
+  if (rows.length === 0) {
+    flash('保存する記録にチェックを入れてください', 'var(--danger)');
     return;
   }
-  if (!weight || weight < 10 || weight > 400) {
-    flash('体重を正しく入力してください', 'var(--danger)');
-    return;
+  const picked = [];
+  for (const r of rows) {
+    const date = r.querySelector('input[type=date]').value;
+    const weight = parseFloat(r.querySelector('input[type=number]').value);
+    if (!date) {
+      flash('日付が空の行があります', 'var(--danger)');
+      return;
+    }
+    if (!weight || weight < 10 || weight > 400) {
+      flash(`体重を正しく入力してください（${date}）`, 'var(--danger)');
+      return;
+    }
+    picked.push({ date, weight });
   }
-  DB.save(date, weight);
-  flash(`保存しました: ${date} / ${weight.toFixed(1)}kg`, 'var(--ok)');
+  picked.forEach((e) => DB.save(e.date, e.weight));
+  flash(
+    picked.length === 1
+      ? `保存しました: ${picked[0].date} / ${picked[0].weight.toFixed(1)}kg`
+      : `${picked.length}件保存しました`,
+    'var(--ok)'
+  );
 });
 
 $('#clear-btn').addEventListener('click', () => {
