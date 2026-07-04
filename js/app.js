@@ -92,6 +92,8 @@ const ocrProgress = $('#ocr-progress');
 const ocrRawWrap = $('#ocr-raw-wrap');
 const ocrRaw = $('#ocr-raw');
 const confirmCard = $('#confirm-card');
+const ocrSpinner = ocrStatus.querySelector('.spinner');
+const ocrProgressWrap = ocrStatus.querySelector('.progress');
 
 fileInput.addEventListener('change', async (e) => {
   const file = e.target.files && e.target.files[0];
@@ -102,6 +104,8 @@ fileInput.addEventListener('change', async (e) => {
   previewWrap.hidden = false;
 
   ocrStatus.hidden = false;
+  ocrSpinner.hidden = false;      // 読み取り中はスピナー表示
+  ocrProgressWrap.hidden = false;
   ocrProgress.style.width = '0%';
   ocrStatusText.textContent = '準備中…';
   confirmCard.hidden = true;
@@ -130,16 +134,22 @@ fileInput.addEventListener('change', async (e) => {
 
     const entries = OcrParse.parseOcrText(text);
     showConfirm(entries);
-    ocrStatusText.textContent = entries.length > 1
-      ? `${entries.length}件の記録が見つかりました。確認してください。`
-      : '読み取り完了。確認してください。';
-    ocrProgress.style.width = '100%';
+    ocrDone(entries.length > 1
+      ? `✓ ${entries.length}件の記録が見つかりました。確認してください。`
+      : '✓ 読み取り完了。確認してください。');
   } catch (err) {
     console.error(err);
-    ocrStatusText.textContent = '読み取りに失敗しました。手動で入力してください。';
+    ocrDone('読み取りに失敗しました。手動で入力してください。');
     showConfirm([{ date: todayISO(), weight: '' }]);
   }
 });
+
+// 読み取り完了時: スピナーとプログレスバーを消して結果メッセージを出す
+function ocrDone(msg) {
+  ocrSpinner.hidden = true;
+  ocrProgressWrap.hidden = true;
+  ocrStatusText.textContent = msg;
+}
 
 /* ---------------- 確認・保存 ---------------- */
 const entryRows = $('#entry-rows');
@@ -194,26 +204,41 @@ $('#save-btn').addEventListener('click', () => {
     picked.push({ date, weight });
   }
   picked.forEach((e) => DB.save(e.date, e.weight));
-  flash(
+  // 保存できたら表示をリセットして、結果はトーストで知らせる
+  resetAddTab();
+  showToast(
     picked.length === 1
       ? `保存しました: ${picked[0].date} / ${picked[0].weight.toFixed(1)}kg`
-      : `${picked.length}件保存しました`,
-    'var(--ok)'
+      : `${picked.length}件保存しました`
   );
 });
 
-$('#clear-btn').addEventListener('click', () => {
+$('#clear-btn').addEventListener('click', resetAddTab);
+
+// 体重タブの読み取り／確認まわりの表示を初期状態に戻す
+function resetAddTab() {
   confirmCard.hidden = true;
   previewWrap.hidden = true;
   ocrStatus.hidden = true;
   ocrRawWrap.hidden = true;
   fileInput.value = '';
-});
+  entryRows.innerHTML = '';
+}
 
 function flash(msg, color) {
   saveMsg.hidden = false;
   saveMsg.textContent = msg;
   saveMsg.style.color = color;
+}
+
+// 画面下に一時的に出るトースト通知
+let toastTimer = null;
+function showToast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
 /* =========================================================

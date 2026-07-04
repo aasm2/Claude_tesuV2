@@ -306,3 +306,26 @@ main { padding: 14px; }
 
 .meal-total { font-size: 16px; font-weight: 800; color: #fb923c; }
 .meal-total span { font-size: 20px; }
+
+/* ---- トースト通知 ---- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  transform: translate(-50%, 12px);
+  max-width: 90%;
+  text-align: center;
+  background: var(--ok);
+  color: #04240f;
+  font-weight: 800;
+  font-size: 15px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .25s ease, transform .25s ease;
+  z-index: 100;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
