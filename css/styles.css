@@ -13,6 +13,9 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* hidden 属性は display 指定より優先させる（.ocr-status 等が flex で上書きするのを防ぐ） */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   background: var(--bg);
