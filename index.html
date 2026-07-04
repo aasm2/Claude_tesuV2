@@ -115,6 +115,7 @@
         <div class="graph-head">
           <h2>体重の推移</h2>
           <select id="range-select" class="range-select">
+            <option value="7">直近1週間</option>
             <option value="30">直近30日</option>
             <option value="90">直近90日</option>
             <option value="180">直近180日</option>
@@ -122,7 +123,7 @@
             <option value="0" selected>すべて</option>
           </select>
         </div>
-        <div class="chart-box"><canvas id="line-chart"></canvas></div>
+        <div class="chart-scroll"><div class="chart-box"><canvas id="line-chart"></canvas></div></div>
         <div id="graph-stats" class="stats"></div>
         <p id="graph-empty" class="empty" hidden>まだデータがありません。「追加」から記録しましょう。</p>
       </div>

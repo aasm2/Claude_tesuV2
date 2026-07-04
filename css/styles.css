@@ -197,6 +197,7 @@ main { padding: 14px; }
   padding: 8px 10px;
   font-size: 14px;
 }
+.chart-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
 .chart-box { position: relative; height: 300px; }
 .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .stat {

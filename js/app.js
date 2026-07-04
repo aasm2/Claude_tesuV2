@@ -402,6 +402,14 @@ function renderGraph() {
     });
   }
 
+  // 点が多いときは横スクロールできるよう、1点あたり最低46pxで幅を広げる
+  const scrollEl = $('.chart-scroll');
+  const chartBox = $('.chart-box');
+  const baseW = scrollEl.clientWidth || 320;
+  const needW = Math.max(baseW, dates.length * 46);
+  chartBox.style.width = `${needW}px`;
+  const maxTicks = Math.max(6, Math.floor(needW / 70));
+
   if (chart) chart.destroy();
   chart = new Chart($('#line-chart'), {
     data: { labels, datasets },
@@ -410,7 +418,7 @@ function renderGraph() {
       maintainAspectRatio: false,
       plugins: { legend: { display: hasKcal, labels: { color: '#93a4bd', boxWidth: 12 } } },
       scales: {
-        x: { ticks: { color: '#93a4bd', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,.05)' } },
+        x: { ticks: { color: '#93a4bd', maxTicksLimit: maxTicks }, grid: { color: 'rgba(255,255,255,.05)' } },
         y: { ticks: { color: '#22d3ee' }, grid: { color: 'rgba(255,255,255,.05)' } },
         ...(hasKcal ? {
           y1: {
@@ -423,6 +431,9 @@ function renderGraph() {
       },
     },
   });
+
+  // 横スクロール時は最新（右端）を最初に表示する
+  scrollEl.scrollLeft = needW;
 
   const weights = wList.map((e) => e.weight);
   if (weights.length) renderStats(statsBox, weights);
