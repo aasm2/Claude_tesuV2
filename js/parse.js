@@ -12,9 +12,18 @@
   const pad = (n) => String(n).padStart(2, '0');
   const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-  // O/o は数字に隣接していれば 0 の誤読とみなして補正する
   function normalize(text) {
-    return text.replace(/[，]/g, '.').replace(/(?<=\d)[Oo]|[Oo](?=[\d.])/g, '0');
+    return text
+      // 丸囲み数字 ①〜⑳ と ⓪ を普通の数字に（体組成計の数字がこう誤認されやすい）
+      .replace(/[①-⑳⓪]/g, (c) => {
+        const cp = c.codePointAt(0);
+        return cp === 0x24EA ? '0' : String(cp - 0x2460 + 1); // ①=1 … ⑳=20
+      })
+      // 全角数字 → 半角
+      .replace(/[０-９]/g, (c) => String(c.codePointAt(0) - 0xFF10))
+      .replace(/[，]/g, '.')
+      // O/o は数字に隣接していれば 0 の誤読とみなして補正する
+      .replace(/(?<=\d)[Oo]|[Oo](?=[\d.])/g, '0');
   }
 
   function iso(y, m, d) {
@@ -50,34 +59,42 @@
     return '';
   }
 
-  // 行から kg 付きの体重らしい数値(20〜200)を1つ取る
+  // 「数字 + k」を体重とみなす（kg が kd/k9 等に誤読されても拾える）。20〜200のみ。
   function kgValue(text) {
-    const m = text.match(/(\d{2,3}[.,]\d)\s*(?:kg|キロ|ｋｇ)/i);
+    const m = text.match(/(\d{2,3})[.,](\d)\s*[kﾋｷ]/i);
     if (!m) return null;
-    const v = parseFloat(m[1].replace(',', '.'));
+    const v = parseFloat(`${m[1]}.${m[2]}`);
     return v >= 20 && v <= 200 ? v : null;
   }
 
   /**
    * 行単位の体重候補。
-   * - 「BMI」と同じ行の kg 値は最優先（体重の隣にBMIが並ぶアプリが多い）
-   * - 「%」を含む行は体脂肪率・筋肉量など別指標の可能性が高いので除外
+   * - 「%」を含む行は体脂肪率・筋肉量など別指標なので除外
+   * - 「数字+k」（kg等）を体重とする。単位が読めなくても BMI 行なら先頭の妥当な数値を採用
    */
   function weightFromLine(line) {
-    const v = kgValue(line);
-    if (v == null) return null;
-    if (/bmi/i.test(line)) return v;
     if (/%/.test(line)) return null;
-    return v;
+    const v = kgValue(line);
+    if (v != null) return v;
+    // 単位が完全に読めなかった場合の保険（BMI 行のみ・体重は先頭側に来る）
+    if (/bmi/i.test(line)) {
+      const re = /(\d{2,3})[.,](\d)/g;
+      let m;
+      while ((m = re.exec(line)) !== null) {
+        const x = parseFloat(`${m[1]}.${m[2]}`);
+        if (x >= 20 && x <= 200) return x;
+      }
+    }
+    return null;
   }
 
   // フォールバック: 画面全体から1件だけ推定（従来ロジック）
   function weightFromWhole(text) {
     const candidates = [];
     let m;
-    const reKg = /(\d{2,3}[.,]\d)\s*(?:kg|キロ|ｋｇ)/gi;
+    const reKg = /(\d{2,3})[.,](\d)\s*[kﾋｷ]/gi;
     while ((m = reKg.exec(text)) !== null) {
-      candidates.push(parseFloat(m[1].replace(',', '.')));
+      candidates.push(parseFloat(`${m[1]}.${m[2]}`));
     }
     if (candidates.length === 0) {
       const reLabel = /(?:体重|weight|たいじゅう)\D{0,6}(\d{2,3}[.,]\d)/gi;
