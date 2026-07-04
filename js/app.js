@@ -31,6 +31,34 @@ const DB = {
   },
 };
 
+const MEAL_KEY = 'meal-entries-v1';
+const MealDB = {
+  all() {
+    try {
+      return JSON.parse(localStorage.getItem(MEAL_KEY)) || [];
+    } catch {
+      return [];
+    }
+  },
+  byDate(date) {
+    return this.all().filter((m) => m.date === date);
+  },
+  // 日付ごとの合計kcal
+  totals() {
+    const t = {};
+    this.all().forEach((m) => { t[m.date] = (t[m.date] || 0) + m.kcal; });
+    return t;
+  },
+  add(date, name, kcal) {
+    const list = this.all();
+    list.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`, date, name, kcal: Math.round(kcal) });
+    localStorage.setItem(MEAL_KEY, JSON.stringify(list));
+  },
+  remove(id) {
+    localStorage.setItem(MEAL_KEY, JSON.stringify(this.all().filter((m) => m.id !== id)));
+  },
+};
+
 /* ---------------- ユーティリティ ---------------- */
 const $ = (sel) => document.querySelector(sel);
 const pad = (n) => String(n).padStart(2, '0');
@@ -45,6 +73,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.querySelectorAll('.tab-panel').forEach((p) => {
       p.classList.toggle('is-active', p.id === `tab-${name}`);
     });
+    if (name === 'meal') renderMealDay();
     if (name === 'graph') renderGraph();
     if (name === 'calendar') renderCalendar();
     if (name === 'list') renderList();
@@ -188,6 +217,89 @@ function flash(msg, color) {
 }
 
 /* =========================================================
+   食事（カロリー記録・手動入力式）
+   ========================================================= */
+const mealDate = $('#meal-date');
+const mealSearch = $('#meal-search');
+const mealAmount = $('#meal-amount');
+const mealResults = $('#meal-results');
+mealDate.value = todayISO();
+
+// カタカナ→ひらがな変換（検索用）
+const toHira = (s) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+
+mealSearch.addEventListener('input', () => {
+  const q = toHira(mealSearch.value.trim().toLowerCase());
+  mealResults.innerHTML = '';
+  if (!q) return;
+  const hits = FOODS.filter((f) => f.n.includes(mealSearch.value.trim()) || toHira(f.n).includes(q) || f.r.includes(q)).slice(0, 8);
+  hits.forEach((f) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'meal-hit';
+    row.innerHTML = `<span class="mh-name">${f.n}</span><span class="mh-kcal">${f.k} kcal</span>`;
+    row.addEventListener('click', () => {
+      const mult = parseFloat(mealAmount.value);
+      const name = mult === 1 ? f.n : `${f.n} ×${mult}`;
+      MealDB.add(mealDate.value, name, f.k * mult);
+      mealSearch.value = '';
+      mealResults.innerHTML = '';
+      renderMealDay();
+    });
+    mealResults.appendChild(row);
+  });
+});
+
+mealDate.addEventListener('change', renderMealDay);
+
+$('#free-add').addEventListener('click', () => {
+  const name = $('#free-name').value.trim();
+  const kcal = parseFloat($('#free-kcal').value);
+  if (!name || !kcal || kcal <= 0 || kcal > 5000) return;
+  MealDB.add(mealDate.value, name, kcal);
+  $('#free-name').value = '';
+  $('#free-kcal').value = '';
+  renderMealDay();
+});
+
+function renderMealDay() {
+  const date = mealDate.value || todayISO();
+  $('#meal-day-title').textContent = date === todayISO() ? '今日の食事' : `${date} の食事`;
+  const meals = MealDB.byDate(date);
+  const box = $('#meal-list');
+  box.innerHTML = '';
+  $('#meal-empty').hidden = meals.length > 0;
+  $('#meal-total').textContent = meals.reduce((s, m) => s + m.kcal, 0).toLocaleString();
+
+  meals.forEach((m) => {
+    const row = document.createElement('div');
+    row.className = 'list-row';
+    row.innerHTML = `
+      <div class="ld">${m.name}</div>
+      <div><span class="lw">${m.kcal.toLocaleString()}</span><span class="diff"> kcal</span></div>
+      <button class="ldel" data-id="${m.id}" aria-label="削除">🗑</button>
+    `;
+    row.querySelector('.ldel').addEventListener('click', () => {
+      MealDB.remove(m.id);
+      renderMealDay();
+    });
+    box.appendChild(row);
+  });
+}
+
+$('#meal-export').addEventListener('click', () => {
+  const list = MealDB.all().sort((a, b) => a.date.localeCompare(b.date));
+  if (list.length === 0) { alert('データがありません'); return; }
+  const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
+  const csv = 'date,name,kcal\n' + list.map((m) => `${m.date},${esc(m.name)},${m.kcal}`).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `meals-${todayISO()}.csv`;
+  a.click();
+});
+
+/* =========================================================
    グラフ
    ========================================================= */
 let chart = null;
@@ -207,11 +319,25 @@ function filteredEntries() {
 }
 
 function renderGraph() {
-  const list = filteredEntries();
+  const days = Number(rangeSelect.value);
+  let cutISO = '';
+  if (days > 0) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    cutISO = toISO(cutoff);
+  }
+
+  const wList = filteredEntries();
+  const kcalTotals = MealDB.totals();
   const empty = $('#graph-empty');
   const statsBox = $('#graph-stats');
 
-  if (list.length === 0) {
+  // 体重と食事、両方の日付を統合した時間軸を作る
+  const dateSet = new Set(wList.map((e) => e.date));
+  Object.keys(kcalTotals).forEach((d) => { if (!cutISO || d >= cutISO) dateSet.add(d); });
+  const dates = [...dateSet].sort();
+
+  if (dates.length === 0) {
     empty.hidden = false;
     statsBox.innerHTML = '';
     if (chart) { chart.destroy(); chart = null; }
@@ -219,38 +345,63 @@ function renderGraph() {
   }
   empty.hidden = true;
 
-  const labels = list.map((e) => e.date.slice(5).replace('-', '/'));
-  const data = list.map((e) => e.weight);
+  const byDate = {};
+  wList.forEach((e) => { byDate[e.date] = e.weight; });
+  const labels = dates.map((d) => d.slice(5).replace('-', '/'));
+  const weightData = dates.map((d) => byDate[d] ?? null);
+  const kcalData = dates.map((d) => kcalTotals[d] ?? null);
+  const hasKcal = kcalData.some((v) => v != null);
+
+  const datasets = [{
+    type: 'line',
+    label: '体重 (kg)',
+    data: weightData,
+    yAxisID: 'y',
+    borderColor: '#22d3ee',
+    backgroundColor: 'rgba(34,211,238,.12)',
+    borderWidth: 2,
+    tension: 0.3,
+    fill: true,
+    spanGaps: true,
+    pointRadius: dates.length > 60 ? 0 : 3,
+    pointBackgroundColor: '#0ea5a4',
+  }];
+  if (hasKcal) {
+    datasets.push({
+      type: 'bar',
+      label: '摂取カロリー (kcal)',
+      data: kcalData,
+      yAxisID: 'y1',
+      backgroundColor: 'rgba(251,146,60,.35)',
+      borderRadius: 3,
+    });
+  }
 
   if (chart) chart.destroy();
   chart = new Chart($('#line-chart'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: '体重 (kg)',
-        data,
-        borderColor: '#22d3ee',
-        backgroundColor: 'rgba(34,211,238,.12)',
-        borderWidth: 2,
-        tension: 0.3,
-        fill: true,
-        pointRadius: list.length > 60 ? 0 : 3,
-        pointBackgroundColor: '#0ea5a4',
-      }],
-    },
+    data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: hasKcal, labels: { color: '#93a4bd', boxWidth: 12 } } },
       scales: {
         x: { ticks: { color: '#93a4bd', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,.05)' } },
-        y: { ticks: { color: '#93a4bd' }, grid: { color: 'rgba(255,255,255,.05)' } },
+        y: { ticks: { color: '#22d3ee' }, grid: { color: 'rgba(255,255,255,.05)' } },
+        ...(hasKcal ? {
+          y1: {
+            position: 'right',
+            beginAtZero: true,
+            ticks: { color: '#fb923c' },
+            grid: { drawOnChartArea: false },
+          },
+        } : {}),
       },
     },
   });
 
-  renderStats(statsBox, data);
+  const weights = wList.map((e) => e.weight);
+  if (weights.length) renderStats(statsBox, weights);
+  else statsBox.innerHTML = '';
 }
 
 function renderStats(box, data) {
@@ -299,6 +450,7 @@ function renderCalendar() {
 
   const byDate = {};
   DB.all().forEach((e) => { byDate[e.date] = e.weight; });
+  const kcalByDate = MealDB.totals();
 
   const cal = $('#calendar');
   cal.innerHTML = '';
@@ -326,7 +478,10 @@ function renderCalendar() {
     const el = document.createElement('div');
     el.className = 'cal-cell' + (iso === today ? ' today' : '');
     const w = byDate[iso];
-    el.innerHTML = `<span class="d">${day}</span>` + (w !== undefined ? `<span class="w">${w.toFixed(1)}</span>` : '');
+    const kc = kcalByDate[iso];
+    el.innerHTML = `<span class="d">${day}</span>`
+      + (w !== undefined ? `<span class="w">${w.toFixed(1)}</span>` : '')
+      + (kc !== undefined ? `<span class="kc">${kc.toLocaleString()}</span>` : '');
     cal.appendChild(el);
   }
 }

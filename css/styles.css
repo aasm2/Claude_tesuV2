@@ -45,13 +45,14 @@ body {
 }
 .tab {
   flex: 1;
-  padding: 10px 4px;
+  padding: 10px 2px;
   border: none;
   border-radius: 12px 12px 0 0;
   background: transparent;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .tab.is-active { background: var(--card); color: var(--text); }
 
@@ -223,7 +224,8 @@ main { padding: 14px; }
 }
 .cal-cell.empty { background: transparent; }
 .cal-cell .d { font-size: 11px; color: var(--muted); }
-.cal-cell .w { font-size: 13px; font-weight: 800; color: var(--accent-2); margin-top: 2px; }
+.cal-cell .w { font-size: 12px; font-weight: 800; color: var(--accent-2); margin-top: 1px; }
+.cal-cell .kc { font-size: 9px; font-weight: 700; color: #fb923c; }
 .cal-cell.today { outline: 2px solid var(--accent); }
 
 .list { display: flex; flex-direction: column; gap: 8px; }
@@ -243,3 +245,63 @@ main { padding: 14px; }
 .diff.down { color: var(--ok); }
 
 .empty { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
+
+/* ---- 食事タブ ---- */
+.meal-search-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.meal-search-row input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  font-size: 16px;
+  background: var(--card-2);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--text);
+}
+.meal-search-row input[type="search"]:focus { outline: none; border-color: var(--accent); }
+.meal-search-row select {
+  background: var(--card-2);
+  color: var(--text);
+  border: none;
+  border-radius: 12px;
+  padding: 0 10px;
+  font-size: 15px;
+}
+.meal-results { display: flex; flex-direction: column; gap: 6px; }
+.meal-hit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--card-2);
+  border: none;
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 15px;
+  text-align: left;
+}
+.meal-hit:active { background: var(--accent); color: #04222a; }
+.mh-name { min-width: 0; }
+.mh-kcal { flex: none; color: #fb923c; font-weight: 700; font-size: 14px; }
+.meal-hit:active .mh-kcal { color: #04222a; }
+
+.free-input { margin-top: 12px; color: var(--muted); font-size: 14px; }
+.free-row { display: flex; gap: 8px; margin-top: 10px; }
+.free-row input {
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: 15px;
+  background: var(--card-2);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+}
+.free-row input[type="text"] { flex: 2; }
+.free-row input[type="number"] { flex: 1; }
+.free-row .btn-ghost { padding: 10px 14px; flex: none; }
+.free-row input:focus { outline: none; border-color: var(--accent); }
+
+.meal-total { font-size: 16px; font-weight: 800; color: #fb923c; }
+.meal-total span { font-size: 20px; }
