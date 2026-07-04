@@ -97,10 +97,21 @@
     return valid.length ? valid[0] : null;
   }
 
+  // 「08:31:17」「7:29」などの時刻を 0:00 からの分に変換する
+  function timeFrom(text) {
+    const m = text.match(/\b([0-2]?\d):([0-5]\d)(?::[0-5]\d)?\b/);
+    if (!m) return null;
+    const h = +m[1];
+    if (h > 23) return null;
+    return h * 60 + +m[2];
+  }
+
+  const TARGET_MIN = 7 * 60; // 朝7:00
+
   /**
    * OCRテキスト全体を解析し、{date, weight} の配列を返す。
    * 履歴画面のように複数の記録が写っていれば全件返す。
-   * 同じ日付が複数ある場合は画面上で先（=新しい測定）を採用。
+   * 同じ日付が複数ある場合は、測定時刻が朝7:00に最も近いものを採用する。
    * 何も取れなくても、手修正用に1行（今日・体重空欄）は返す。
    */
   function parseOcrText(text, now) {
@@ -108,26 +119,52 @@
     const cleaned = normalize(text);
     const entries = [];
     let pendingDate = '';
+    let pendingTime = null;
+    let lastEntry = null;
 
     for (const raw of cleaned.split(/\r?\n/)) {
       const line = raw.trim();
       if (!line) continue;
       const date = dateFrom(line, now);
       const weight = weightFromLine(line);
+      // 日付・体重を含む行の数字を時刻と誤認しないように、それ以外の行だけ時刻判定する
+      const time = (date || weight != null) ? null : timeFrom(line);
+
       if (date && weight != null) {
-        entries.push({ date, weight });
+        lastEntry = { date, weight, time: timeFrom(line) };
+        entries.push(lastEntry);
         pendingDate = '';
+        pendingTime = null;
       } else if (date) {
         pendingDate = date;
-      } else if (weight != null && pendingDate) {
-        entries.push({ date: pendingDate, weight });
-        pendingDate = '';
+        pendingTime = null;
+      } else if (weight != null) {
+        if (pendingDate) {
+          lastEntry = { date: pendingDate, weight, time: pendingTime };
+          entries.push(lastEntry);
+          pendingDate = '';
+          pendingTime = null;
+        }
+      } else if (time != null) {
+        // 時刻だけの行: 直近の記録（まだ時刻なし）か、次に来る体重に紐づける
+        if (lastEntry && lastEntry.time == null && !pendingDate) {
+          lastEntry.time = time;
+        } else {
+          pendingTime = time;
+        }
       }
     }
 
     if (entries.length) {
-      const seen = new Set();
-      return entries.filter((e) => !seen.has(e.date) && seen.add(e.date));
+      // 同じ日付が複数 → 朝7:00に最も近い時刻のものを採用（時刻なしは最後の手段）
+      const best = {};
+      for (const e of entries) {
+        const dist = e.time == null ? Infinity : Math.abs(e.time - TARGET_MIN);
+        if (!best[e.date] || dist < best[e.date].dist) {
+          best[e.date] = { weight: e.weight, dist };
+        }
+      }
+      return Object.keys(best).sort().map((date) => ({ date, weight: best[date].weight }));
     }
 
     const w = weightFromWhole(cleaned);

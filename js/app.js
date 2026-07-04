@@ -448,8 +448,16 @@ function renderCalendar() {
   initCalState();
   $('#cal-title').textContent = `${calYear}年 ${calMonth + 1}月`;
 
+  const sorted = DB.all();
   const byDate = {};
-  DB.all().forEach((e) => { byDate[e.date] = e.weight; });
+  const dirByDate = {}; // 前回記録日と比べた増減（'up' なら赤表示）
+  sorted.forEach((e, i) => {
+    byDate[e.date] = e.weight;
+    if (i > 0) {
+      const d = e.weight - sorted[i - 1].weight;
+      dirByDate[e.date] = d > 0 ? 'up' : d < 0 ? 'down' : 'same';
+    }
+  });
   const kcalByDate = MealDB.totals();
 
   const cal = $('#calendar');
@@ -479,8 +487,9 @@ function renderCalendar() {
     el.className = 'cal-cell' + (iso === today ? ' today' : '');
     const w = byDate[iso];
     const kc = kcalByDate[iso];
+    const wCls = dirByDate[iso] === 'up' ? ' up' : '';
     el.innerHTML = `<span class="d">${day}</span>`
-      + (w !== undefined ? `<span class="w">${w.toFixed(1)}</span>` : '')
+      + (w !== undefined ? `<span class="w${wCls}">${w.toFixed(1)}</span>` : '')
       + (kc !== undefined ? `<span class="kc">${kc.toLocaleString()}</span>` : '');
     cal.appendChild(el);
   }

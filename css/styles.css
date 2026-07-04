@@ -225,6 +225,7 @@ main { padding: 14px; }
 .cal-cell.empty { background: transparent; }
 .cal-cell .d { font-size: 11px; color: var(--muted); }
 .cal-cell .w { font-size: 12px; font-weight: 800; color: var(--accent-2); margin-top: 1px; }
+.cal-cell .w.up { color: var(--danger); }
 .cal-cell .kc { font-size: 9px; font-weight: 700; color: #fb923c; }
 .cal-cell.today { outline: 2px solid var(--accent); }
 
