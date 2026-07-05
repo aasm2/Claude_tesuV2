@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0ea5a4" />
+  <meta name="theme-color" content="#38bfb0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="体重ログ" />
@@ -59,7 +59,7 @@
       <div id="confirm-card" class="card" hidden>
         <h2>確認して保存</h2>
         <p class="hint">読み取り結果を確認・修正してください。複数見つかった場合は、保存したい記録にチェックを入れてください。</p>
-        <div class="entry-head"><span></span><span>日付</span><span>体重 (kg)</span></div>
+        <div class="entry-head"><span></span><span>日付</span><span>体重(kg)</span><span>体脂肪(%)</span></div>
         <div id="entry-rows" class="entry-rows"></div>
         <button id="add-row-btn" class="btn-ghost btn-block">＋ 行を追加</button>
         <div class="actions">
@@ -137,7 +137,11 @@
           <h2 id="cal-title">—</h2>
           <button id="cal-next" class="btn-ghost">›</button>
         </div>
-        <div id="calendar" class="calendar"></div>
+        <div class="cal-wrap">
+          <div id="calendar" class="calendar"></div>
+          <svg id="cal-graph" class="cal-graph"></svg>
+        </div>
+        <p class="cal-hint">上へスワイプで翌月・下へスワイプで前月</p>
       </div>
     </section>
 

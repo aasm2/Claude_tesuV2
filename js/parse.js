@@ -125,6 +125,41 @@
 
   const TARGET_MIN = 7 * 60; // 朝7:00
 
+  // 行から妥当な範囲のパーセント値を1つ取る
+  function percentIn(text, lo, hi) {
+    if (!text) return null;
+    const re = /(\d{1,2}(?:\.\d)?)\s*[%％]/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const v = parseFloat(m[1]);
+      if (v >= lo && v <= hi) return v;
+    }
+    return null;
+  }
+
+  /**
+   * 詳細画面のOCRから「体脂肪率」を日付ごとに拾う。
+   * レイアウト上、値（32.0%）はラベル「体脂肪率」の前の行に来ることが多いので
+   * 前行→同行→次行の順で 3〜60% の値を探し、直上の日付に紐づける。
+   */
+  function bodyFatByDate(lines, now) {
+    const map = {};
+    for (let i = 0; i < lines.length; i++) {
+      if (!/体脂肪率|体脂肪(?!計)/.test(lines[i])) continue;
+      const bf = percentIn(lines[i - 1], 3, 60)
+        ?? percentIn(lines[i], 3, 60)
+        ?? percentIn(lines[i + 1], 3, 60);
+      if (bf == null) continue;
+      let d = '';
+      for (let j = i; j >= 0; j--) {
+        const dd = dateFrom(lines[j], now);
+        if (dd) { d = dd; break; }
+      }
+      if (d && map[d] == null) map[d] = bf;
+    }
+    return map;
+  }
+
   /**
    * OCRテキスト全体を解析し、{date, weight} の配列を返す。
    * 履歴画面のように複数の記録が写っていれば全件返す。
@@ -134,13 +169,14 @@
   function parseOcrText(text, now) {
     now = now || new Date();
     const cleaned = normalize(text);
+    const lines = cleaned.split(/\r?\n/).map((s) => s.trim());
+    const fatByDate = bodyFatByDate(lines, now);
     const entries = [];
     let pendingDate = '';
     let pendingTime = null;
     let lastEntry = null;
 
-    for (const raw of cleaned.split(/\r?\n/)) {
-      const line = raw.trim();
+    for (const line of lines) {
       if (!line) continue;
       const date = dateFrom(line, now);
       const weight = weightFromLine(line);
@@ -181,13 +217,19 @@
           best[e.date] = { weight: e.weight, dist };
         }
       }
-      return Object.keys(best).sort().map((date) => ({ date, weight: best[date].weight }));
+      return Object.keys(best).sort().map((date) => ({
+        date,
+        weight: best[date].weight,
+        bodyFat: fatByDate[date] ?? '',
+      }));
     }
 
     const w = weightFromWhole(cleaned);
+    const date = dateFrom(cleaned, now) || toISO(now);
     return [{
-      date: dateFrom(cleaned, now) || toISO(now),
+      date,
       weight: w == null ? '' : w,
+      bodyFat: fatByDate[date] ?? '',
     }];
   }
 

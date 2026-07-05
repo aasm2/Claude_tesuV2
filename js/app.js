@@ -20,9 +20,13 @@ const DB = {
       return [];
     }
   },
-  save(date, weight) {
+  save(date, weight, bodyFat) {
     const list = this.all().filter((e) => e.date !== date); // 同じ日付は上書き
-    list.push({ date, weight: Number(weight), updatedAt: Date.now() });
+    const entry = { date, weight: Number(weight), updatedAt: Date.now() };
+    if (bodyFat !== '' && bodyFat != null && !Number.isNaN(Number(bodyFat))) {
+      entry.bodyFat = Number(bodyFat);
+    }
+    list.push(entry);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   },
   remove(date) {
@@ -158,28 +162,29 @@ const saveMsg = $('#save-msg');
 function showConfirm(entries) {
   confirmCard.hidden = false;
   entryRows.innerHTML = '';
-  entries.forEach((e) => entryRows.appendChild(buildRow(e.date, e.weight)));
+  entries.forEach((e) => entryRows.appendChild(buildRow(e.date, e.weight, e.bodyFat)));
   saveMsg.hidden = true;
   confirmCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function buildRow(date, weight) {
+function buildRow(date, weight, bodyFat) {
   const row = document.createElement('div');
   row.className = 'entry-row';
   row.innerHTML = `
     <input type="checkbox" checked aria-label="この記録を保存する" />
     <input type="date" value="${date}" />
-    <input type="number" step="0.1" inputmode="decimal" placeholder="65.4" value="${weight === '' ? '' : weight}" />
+    <input type="number" step="0.1" inputmode="decimal" placeholder="65.4" value="${weight === '' || weight == null ? '' : weight}" />
+    <input type="number" step="0.1" inputmode="decimal" placeholder="体脂肪" value="${bodyFat === '' || bodyFat == null ? '' : bodyFat}" />
   `;
   return row;
 }
 
 $('#manual-btn').addEventListener('click', () => {
-  showConfirm([{ date: todayISO(), weight: '' }]);
+  showConfirm([{ date: todayISO(), weight: '', bodyFat: '' }]);
 });
 
 $('#add-row-btn').addEventListener('click', () => {
-  entryRows.appendChild(buildRow(todayISO(), ''));
+  entryRows.appendChild(buildRow(todayISO(), '', ''));
 });
 
 $('#save-btn').addEventListener('click', () => {
@@ -191,8 +196,10 @@ $('#save-btn').addEventListener('click', () => {
   }
   const picked = [];
   for (const r of rows) {
+    const nums = r.querySelectorAll('input[type=number]');
     const date = r.querySelector('input[type=date]').value;
-    const weight = parseFloat(r.querySelector('input[type=number]').value);
+    const weight = parseFloat(nums[0].value);
+    const fatRaw = nums[1].value;
     if (!date) {
       flash('日付が空の行があります', 'var(--danger)');
       return;
@@ -201,9 +208,14 @@ $('#save-btn').addEventListener('click', () => {
       flash(`体重を正しく入力してください（${date}）`, 'var(--danger)');
       return;
     }
-    picked.push({ date, weight });
+    const bodyFat = fatRaw === '' ? '' : parseFloat(fatRaw);
+    if (bodyFat !== '' && (Number.isNaN(bodyFat) || bodyFat < 1 || bodyFat > 70)) {
+      flash(`体脂肪率を正しく入力してください（${date}）`, 'var(--danger)');
+      return;
+    }
+    picked.push({ date, weight, bodyFat });
   }
-  picked.forEach((e) => DB.save(e.date, e.weight));
+  picked.forEach((e) => DB.save(e.date, e.weight, e.bodyFat));
   // 保存できたら表示をリセットして、結果はトーストで知らせる
   resetAddTab();
   showToast(
@@ -382,14 +394,14 @@ function renderGraph() {
     label: '体重 (kg)',
     data: weightData,
     yAxisID: 'y',
-    borderColor: '#22d3ee',
-    backgroundColor: 'rgba(34,211,238,.12)',
+    borderColor: '#14b8a6',
+    backgroundColor: 'rgba(20,184,166,.12)',
     borderWidth: 2,
     tension: 0.3,
     fill: true,
     spanGaps: true,
     pointRadius: dates.length > 60 ? 0 : 3,
-    pointBackgroundColor: '#0ea5a4',
+    pointBackgroundColor: '#0f9d8f',
   }];
   if (hasKcal) {
     datasets.push({
@@ -397,7 +409,7 @@ function renderGraph() {
       label: '摂取カロリー (kcal)',
       data: kcalData,
       yAxisID: 'y1',
-      backgroundColor: 'rgba(251,146,60,.35)',
+      backgroundColor: 'rgba(242,128,60,.35)',
       borderRadius: 3,
     });
   }
@@ -416,15 +428,15 @@ function renderGraph() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: hasKcal, labels: { color: '#93a4bd', boxWidth: 12 } } },
+      plugins: { legend: { display: hasKcal, labels: { color: '#6b7784', boxWidth: 12 } } },
       scales: {
-        x: { ticks: { color: '#93a4bd', maxTicksLimit: maxTicks }, grid: { color: 'rgba(255,255,255,.05)' } },
-        y: { ticks: { color: '#22d3ee' }, grid: { color: 'rgba(255,255,255,.05)' } },
+        x: { ticks: { color: '#6b7784', maxTicksLimit: maxTicks }, grid: { color: 'rgba(0,0,0,.06)' } },
+        y: { ticks: { color: '#0f9d8f' }, grid: { color: 'rgba(0,0,0,.06)' } },
         ...(hasKcal ? {
           y1: {
             position: 'right',
             beginAtZero: true,
-            ticks: { color: '#fb923c' },
+            ticks: { color: '#f2803c' },
             grid: { drawOnChartArea: false },
           },
         } : {}),
@@ -486,7 +498,7 @@ function renderCalendar() {
 
   const sorted = DB.all();
   const byDate = {};
-  const dirByDate = {}; // 前回記録日と比べた増減（'up' なら赤表示）
+  const dirByDate = {}; // 前回記録日と比べた増減（'up' なら赤ラベル）
   sorted.forEach((e, i) => {
     byDate[e.date] = e.weight;
     if (i > 0) {
@@ -500,9 +512,9 @@ function renderCalendar() {
   cal.innerHTML = '';
 
   const dows = ['日', '月', '火', '水', '木', '金', '土'];
-  dows.forEach((d) => {
+  dows.forEach((d, i) => {
     const el = document.createElement('div');
-    el.className = 'cal-dow';
+    el.className = 'cal-dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '');
     el.textContent = d;
     cal.appendChild(el);
   });
@@ -517,18 +529,110 @@ function renderCalendar() {
     cal.appendChild(el);
   }
 
+  const weighted = []; // 折れ線を引く対象 {el, w, weekRow, up}
   for (let day = 1; day <= daysInMonth; day++) {
     const iso = `${calYear}-${pad(calMonth + 1)}-${pad(day)}`;
+    const dow = new Date(calYear, calMonth, day).getDay();
     const el = document.createElement('div');
-    el.className = 'cal-cell' + (iso === today ? ' today' : '');
-    const w = byDate[iso];
+    el.className = 'cal-cell'
+      + (iso === today ? ' today' : '')
+      + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
     const kc = kcalByDate[iso];
-    const wCls = dirByDate[iso] === 'up' ? ' up' : '';
     el.innerHTML = `<span class="d">${day}</span>`
-      + (w !== undefined ? `<span class="w${wCls}">${w.toFixed(1)}</span>` : '')
       + (kc !== undefined ? `<span class="kc">${kc.toLocaleString()}</span>` : '');
     cal.appendChild(el);
+    if (byDate[iso] !== undefined) {
+      weighted.push({
+        el,
+        w: byDate[iso],
+        weekRow: Math.floor((firstDow + day - 1) / 7),
+        up: dirByDate[iso] === 'up',
+      });
+    }
   }
+
+  drawCalGraph(weighted);
+  setupCalSwipe();
+}
+
+// カレンダーの上に体重の折れ線グラフ(SVG)を重ねて描く
+function drawCalGraph(items) {
+  const svg = $('#cal-graph');
+  svg.innerHTML = '';
+  const wrap = svg.parentElement;
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+  if (!items.length || !W) return;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const ws = items.map((it) => it.w);
+  const min = Math.min(...ws);
+  const span = (Math.max(...ws) - min) || 1;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  items.forEach((it) => {
+    const el = it.el;
+    it.x = el.offsetLeft + el.offsetWidth / 2;
+    const frac = (it.w - min) / span; // 0(最小)〜1(最大)
+    it.y = el.offsetTop + el.offsetHeight * 0.82 - frac * (el.offsetHeight * 0.46);
+  });
+
+  // 折れ線は同じ週(行)の中だけ結ぶ
+  const rows = {};
+  items.forEach((it) => { (rows[it.weekRow] = rows[it.weekRow] || []).push(it); });
+  Object.values(rows).forEach((row) => {
+    if (row.length < 2) return;
+    row.sort((a, b) => a.x - b.x);
+    const pl = document.createElementNS(NS, 'polyline');
+    pl.setAttribute('points', row.map((p) => `${p.x},${p.y}`).join(' '));
+    pl.setAttribute('class', 'cg-line');
+    svg.appendChild(pl);
+  });
+
+  // 点と体重ラベル（前日比プラスは赤）
+  items.forEach((it) => {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', it.x);
+    c.setAttribute('cy', it.y);
+    c.setAttribute('r', '3.5');
+    c.setAttribute('class', 'cg-dot');
+    svg.appendChild(c);
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', it.x);
+    t.setAttribute('y', it.y - 6);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('class', 'cg-label' + (it.up ? ' up' : ''));
+    t.textContent = it.w.toFixed(1);
+    svg.appendChild(t);
+  });
+}
+
+// カレンダーの上下スワイプで月を移動（上=翌月 / 下=前月）
+let calSwipeReady = false;
+function setupCalSwipe() {
+  if (calSwipeReady) return;
+  calSwipeReady = true;
+  const wrap = document.querySelector('.cal-wrap');
+  let startY = null;
+  let startX = null;
+  wrap.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+  wrap.addEventListener('touchend', (e) => {
+    if (startY == null) return;
+    const dy = e.changedTouches[0].clientY - startY;
+    const dx = e.changedTouches[0].clientX - startX;
+    startY = null;
+    if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) shiftMonth(dy < 0 ? 1 : -1);
+  }, { passive: true });
+  let wheelLock = false;
+  wrap.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) < 8 || wheelLock) return;
+    wheelLock = true;
+    setTimeout(() => { wheelLock = false; }, 400);
+    shiftMonth(e.deltaY > 0 ? 1 : -1);
+  }, { passive: true });
 }
 
 /* =========================================================
@@ -555,11 +659,12 @@ function renderList() {
       const sign = d > 0 ? '+' : '';
       diffHtml = `<span class="diff ${cls}">${sign}${d.toFixed(1)}</span>`;
     }
+    const fatHtml = e.bodyFat != null ? `<span class="lfat">体脂肪 ${e.bodyFat.toFixed(1)}%</span>` : '';
     const row = document.createElement('div');
     row.className = 'list-row';
     row.innerHTML = `
       <div class="ld">${e.date}</div>
-      <div><span class="lw">${e.weight.toFixed(1)}kg</span>${diffHtml}</div>
+      <div><span class="lw">${e.weight.toFixed(1)}kg</span>${diffHtml}${fatHtml}</div>
       <button class="ldel" data-date="${e.date}" aria-label="削除">🗑</button>
     `;
     box.appendChild(row);
@@ -578,7 +683,7 @@ function renderList() {
 $('#export-btn').addEventListener('click', () => {
   const list = DB.all();
   if (list.length === 0) { alert('データがありません'); return; }
-  const csv = 'date,weight\n' + list.map((e) => `${e.date},${e.weight}`).join('\n');
+  const csv = 'date,weight,bodyFat\n' + list.map((e) => `${e.date},${e.weight},${e.bodyFat ?? ''}`).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
