@@ -472,30 +472,33 @@ function renderStats(box, data) {
 /* =========================================================
    カレンダー
    ========================================================= */
-let calYear, calMonth; // calMonth: 0-11
-
-function initCalState() {
-  if (calYear === undefined) {
-    const now = new Date();
-    calYear = now.getFullYear();
-    calMonth = now.getMonth();
+// 表示する日付の範囲（週単位・連続）。開始=最古の記録の週(なければ4週前)、終了=今週の土曜。
+function calRange(sorted) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let start;
+  if (sorted.length) {
+    start = new Date(`${sorted[0].date}T00:00:00`);
+  } else {
+    start = new Date(today);
+    start.setDate(start.getDate() - 28);
   }
+  const limit = new Date(today); // 過去は最大およそ18か月まで（DOM肥大防止）
+  limit.setDate(limit.getDate() - 550);
+  if (start < limit) start = limit;
+  start.setDate(start.getDate() - start.getDay()); // その週の日曜へ
+  // 終端は「今日」と「最新の記録」の遅い方の週の土曜まで
+  let end = new Date(today);
+  if (sorted.length) {
+    const last = new Date(`${sorted[sorted.length - 1].date}T00:00:00`);
+    if (last > end) end = last;
+  }
+  end.setDate(end.getDate() + (6 - end.getDay()));
+  return { start, end };
 }
 
-$('#cal-prev').addEventListener('click', () => { shiftMonth(-1); });
-$('#cal-next').addEventListener('click', () => { shiftMonth(1); });
-function shiftMonth(delta) {
-  initCalState();
-  calMonth += delta;
-  if (calMonth < 0) { calMonth = 11; calYear--; }
-  if (calMonth > 11) { calMonth = 0; calYear++; }
-  renderCalendar();
-}
-
+// 月の区切りをやめ、週が連続する縦スクロールのカレンダーを描く
 function renderCalendar() {
-  initCalState();
-  $('#cal-title').textContent = `${calYear}年 ${calMonth + 1}月`;
-
   const sorted = DB.all();
   const byDate = {};
   const dirByDate = {}; // 前回記録日と比べた増減（'up' なら赤ラベル）
@@ -510,48 +513,45 @@ function renderCalendar() {
 
   const cal = $('#calendar');
   cal.innerHTML = '';
-
-  const dows = ['日', '月', '火', '水', '木', '金', '土'];
-  dows.forEach((d, i) => {
-    const el = document.createElement('div');
-    el.className = 'cal-dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '');
-    el.textContent = d;
-    cal.appendChild(el);
-  });
-
-  const firstDow = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const { start, end } = calRange(sorted);
   const today = todayISO();
+  const weighted = [];
+  let shownMonth = '';
+  let weekIndex = -1;
 
-  for (let i = 0; i < firstDow; i++) {
-    const el = document.createElement('div');
-    el.className = 'cal-cell empty';
-    cal.appendChild(el);
-  }
-
-  const weighted = []; // 折れ線を引く対象 {el, w, weekRow, up}
-  for (let day = 1; day <= daysInMonth; day++) {
-    const iso = `${calYear}-${pad(calMonth + 1)}-${pad(day)}`;
-    const dow = new Date(calYear, calMonth, day).getDay();
+  const cur = new Date(start);
+  while (cur <= end) {
+    if (cur.getDay() === 0) {
+      weekIndex++;
+      const mk = `${cur.getFullYear()}-${cur.getMonth()}`;
+      if (mk !== shownMonth) {
+        shownMonth = mk;
+        const h = document.createElement('div');
+        h.className = 'cal-month';
+        h.textContent = `${cur.getFullYear()}年 ${cur.getMonth() + 1}月`;
+        cal.appendChild(h);
+      }
+    }
+    const iso = toISO(cur);
+    const dow = cur.getDay();
     const el = document.createElement('div');
     el.className = 'cal-cell'
       + (iso === today ? ' today' : '')
       + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
     const kc = kcalByDate[iso];
-    el.innerHTML = `<span class="d">${day}</span>`
+    el.innerHTML = `<span class="d">${cur.getDate()}</span>`
       + (kc !== undefined ? `<span class="kc">${kc.toLocaleString()}</span>` : '');
     cal.appendChild(el);
     if (byDate[iso] !== undefined) {
-      weighted.push({
-        el,
-        w: byDate[iso],
-        weekRow: Math.floor((firstDow + day - 1) / 7),
-        up: dirByDate[iso] === 'up',
-      });
+      weighted.push({ el, w: byDate[iso], weekRow: weekIndex, up: dirByDate[iso] === 'up' });
     }
+    cur.setDate(cur.getDate() + 1);
   }
 
   drawCalGraph(weighted);
+  // 最新（今日）が見えるよう一番下までスクロール
+  const sc = document.querySelector('.cal-scroll');
+  if (sc) sc.scrollTop = sc.scrollHeight;
 }
 
 // カレンダーの上に体重の折れ線グラフ(SVG)を重ねて描く

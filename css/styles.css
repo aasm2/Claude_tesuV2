@@ -219,10 +219,33 @@ main { padding: 14px; }
 .stat .v.down { color: var(--ok); }
 .stat .l { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-/* ---- カレンダー ---- */
+/* ---- カレンダー（週が連続する縦スクロール） ---- */
+.cal-scroll { height: 62vh; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.cal-dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  height: 28px;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--card);
+}
 .cal-wrap { position: relative; }
 .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; width: 100%; }
-.cal-dow { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0; min-width: 0; }
+.cal-month {
+  grid-column: 1 / -1;
+  position: sticky;
+  top: 28px;
+  z-index: 2;
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-2);
+  padding: 8px 2px 5px;
+}
+.cal-dow { text-align: center; font-size: 11px; color: var(--muted); min-width: 0; }
 .cal-dow.sun { color: var(--sun); }
 .cal-dow.sat { color: var(--sat); }
 .cal-cell {

@@ -132,16 +132,22 @@
     <!-- ============ カレンダータブ ============ -->
     <section id="tab-calendar" class="tab-panel">
       <div class="card">
-        <div class="cal-head">
-          <button id="cal-prev" class="btn-ghost">‹</button>
-          <h2 id="cal-title">—</h2>
-          <button id="cal-next" class="btn-ghost">›</button>
+        <div class="cal-scroll">
+          <div class="cal-dow-row">
+            <span class="cal-dow sun">日</span>
+            <span class="cal-dow">月</span>
+            <span class="cal-dow">火</span>
+            <span class="cal-dow">水</span>
+            <span class="cal-dow">木</span>
+            <span class="cal-dow">金</span>
+            <span class="cal-dow sat">土</span>
+          </div>
+          <div class="cal-wrap">
+            <div id="calendar" class="calendar"></div>
+            <svg id="cal-graph" class="cal-graph"></svg>
+          </div>
         </div>
-        <div class="cal-wrap">
-          <div id="calendar" class="calendar"></div>
-          <svg id="cal-graph" class="cal-graph"></svg>
-        </div>
-        <p class="cal-hint">‹ › ボタンで前後の月へ</p>
+        <p class="cal-hint">スクロールで過去・未来へ連続表示</p>
       </div>
     </section>
 
