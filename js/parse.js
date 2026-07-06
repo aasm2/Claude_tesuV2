@@ -128,14 +128,17 @@
   // 行から妥当な範囲のパーセント値を1つ取る
   function percentIn(text, lo, hi) {
     if (!text) return null;
-    const re = /(\d{1,2}(?:\.\d)?)\s*[%％]/g;
+    const re = /(\d{1,2}(?:[.,]\d)?)\s*[%％]/g;
     let m;
     while ((m = re.exec(text)) !== null) {
-      const v = parseFloat(m[1]);
+      const v = parseFloat(m[1].replace(',', '.'));
       if (v >= lo && v <= hi) return v;
     }
     return null;
   }
+
+  // Tesseract は日本語の字間に空白を入れることがある（「体 脂 肪 率」）ので空白を無視して判定
+  const FAT_LABEL = /体\s*脂\s*肪\s*率/;
 
   /**
    * 詳細画面のOCRから「体脂肪率」を日付ごとに拾う。
@@ -145,7 +148,7 @@
   function bodyFatByDate(lines, now) {
     const map = {};
     for (let i = 0; i < lines.length; i++) {
-      if (!/体脂肪率|体脂肪(?!計)/.test(lines[i])) continue;
+      if (!FAT_LABEL.test(lines[i])) continue;
       const bf = percentIn(lines[i - 1], 3, 60)
         ?? percentIn(lines[i], 3, 60)
         ?? percentIn(lines[i + 1], 3, 60);

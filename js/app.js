@@ -552,7 +552,6 @@ function renderCalendar() {
   }
 
   drawCalGraph(weighted);
-  setupCalSwipe();
 }
 
 // カレンダーの上に体重の折れ線グラフ(SVG)を重ねて描く
@@ -607,33 +606,6 @@ function drawCalGraph(items) {
   });
 }
 
-// カレンダーの上下スワイプで月を移動（上=翌月 / 下=前月）
-let calSwipeReady = false;
-function setupCalSwipe() {
-  if (calSwipeReady) return;
-  calSwipeReady = true;
-  const wrap = document.querySelector('.cal-wrap');
-  let startY = null;
-  let startX = null;
-  wrap.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-    startX = e.touches[0].clientX;
-  }, { passive: true });
-  wrap.addEventListener('touchend', (e) => {
-    if (startY == null) return;
-    const dy = e.changedTouches[0].clientY - startY;
-    const dx = e.changedTouches[0].clientX - startX;
-    startY = null;
-    if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) shiftMonth(dy < 0 ? 1 : -1);
-  }, { passive: true });
-  let wheelLock = false;
-  wrap.addEventListener('wheel', (e) => {
-    if (Math.abs(e.deltaY) < 8 || wheelLock) return;
-    wheelLock = true;
-    setTimeout(() => { wheelLock = false; }, 400);
-    shiftMonth(e.deltaY > 0 ? 1 : -1);
-  }, { passive: true });
-}
 
 /* =========================================================
    一覧 / CSV
