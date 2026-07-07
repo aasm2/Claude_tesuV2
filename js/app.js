@@ -73,6 +73,7 @@ const $ = (sel) => document.querySelector(sel);
 const pad = (n) => String(n).padStart(2, '0');
 const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const todayISO = () => toISO(new Date());
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ---------------- タブ切り替え ---------------- */
 document.querySelectorAll('.tab').forEach((tab) => {
@@ -311,6 +312,31 @@ $('#meal-prev').addEventListener('click', () => shiftMealDate(-1));
 $('#meal-next').addEventListener('click', () => shiftMealDate(1));
 $('#meal-today').addEventListener('click', () => { mealDate.value = todayISO(); renderMealDay(); });
 
+/* ---- テキストを貼り付けて記録 ---- */
+$('#paste-parse').addEventListener('click', () => {
+  const res = OcrParse.parseMealTemplate($('#paste-text').value);
+  const box = $('#paste-preview');
+  box.hidden = false;
+  if (!res.items.length) {
+    box.innerHTML = '<p class="empty">読み取れませんでした。1行に「料理名 カロリー」の形式で書いてください。</p>';
+    return;
+  }
+  const date = res.date || mealDate.value || todayISO();
+  const total = res.items.reduce((s, i) => s + i.kcal, 0);
+  box.innerHTML = `<p class="hint mini"><b>${date}</b> に ${res.items.length}件（合計 ${total.toLocaleString()}kcal）を保存します</p>`
+    + res.items.map((i) => `<div class="paste-item"><span>${escapeHtml(i.name)}</span><span>${i.kcal.toLocaleString()}kcal</span></div>`).join('')
+    + '<button id="paste-save" class="btn-primary btn-block">この内容で保存</button>';
+  box.querySelector('#paste-save').addEventListener('click', () => {
+    res.items.forEach((i) => MealDB.add(date, i.name, i.kcal));
+    $('#paste-text').value = '';
+    box.hidden = true;
+    box.innerHTML = '';
+    mealDate.value = date;
+    renderMealDay();
+    showToast(`${res.items.length}件保存しました`);
+  });
+});
+
 $('#free-add').addEventListener('click', () => {
   const name = $('#free-name').value.trim();
   const kcal = parseFloat($('#free-kcal').value);
@@ -336,7 +362,7 @@ function renderMealDay() {
     const thumb = m.photoId ? '<img class="meal-thumb" alt="写真" />' : '';
     row.innerHTML = `
       ${thumb}
-      <div class="ld">${m.name}</div>
+      <div class="ld">${escapeHtml(m.name)}</div>
       <div><span class="lw">${m.kcal.toLocaleString()}</span><span class="diff"> kcal</span></div>
       <button class="ldel" data-id="${m.id}" aria-label="削除">🗑</button>
     `;

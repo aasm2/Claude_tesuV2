@@ -256,7 +256,36 @@
     return null;
   }
 
-  const api = { parseOcrText, extractKcal };
+  /**
+   * 貼り付けテキストを食事リストとして解析する。
+   * 1行 = 「料理名 カロリー」。先頭に日付行(任意)があればその日に保存する想定。
+   * 箇条書き記号・番号・kcal 表記・全角数字などに寛容。
+   * 戻り値: { date: 'YYYY-MM-DD'|null, items: [{name, kcal}] }
+   */
+  function parseMealTemplate(text) {
+    const lines = normalize(String(text || '')).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    let date = null;
+    const items = [];
+    for (const raw of lines) {
+      const dl = raw.match(/^(?:日付|date)?\s*[:：]?\s*(20\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})\s*(?:[(（][^)）]*[)）])?\s*$/i);
+      if (dl) {
+        if (date === null) date = `${dl[1]}-${pad(+dl[2])}-${pad(+dl[3])}`;
+        continue;
+      }
+      let line = raw.replace(/^\s*(?:[-・*•‣▪]|\d{1,2}[.)、])\s*/, ''); // 箇条書き・番号を除去
+      if (/^(合計|総カロリー|トータル|total)/i.test(line)) continue; // 合計行は除外
+      const km = line.match(/(\d{1,4})\s*(?:kcal|ｋｃａｌ|キロカロリー)?\s*$/i);
+      if (!km) continue;
+      const kcal = +km[1];
+      if (!(kcal >= 1 && kcal <= 5000)) continue;
+      const name = line.slice(0, km.index).replace(/[\s:：,，、\-–—]+$/, '').trim();
+      if (!name) continue;
+      items.push({ name, kcal });
+    }
+    return { date, items };
+  }
+
+  const api = { parseOcrText, extractKcal, parseMealTemplate };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else globalThis.OcrParse = api;
 })();

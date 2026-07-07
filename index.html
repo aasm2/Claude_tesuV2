@@ -101,6 +101,14 @@
           </div>
         </details>
 
+        <details class="paste-input">
+          <summary>📋 テキストを貼り付けて記録</summary>
+          <p class="hint mini">チャット等で下の形式にまとめてもらい、貼り付けて解析します（1行＝「料理名 カロリー」。先頭に日付があればその日に保存）。</p>
+          <textarea id="paste-text" rows="6" placeholder="2026-07-07&#10;目玉焼き 90&#10;ごはん 240&#10;みそ汁 40&#10;唐揚げ弁当 720"></textarea>
+          <button id="paste-parse" class="btn-ghost btn-block">解析する</button>
+          <div id="paste-preview" class="paste-preview" hidden></div>
+        </details>
+
         <label class="filebtn mt">
           <input type="file" id="meal-photo-input" accept="image/*" />
           <span>📷 写真で記録（食事・栄養表示）</span>
