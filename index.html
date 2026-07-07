@@ -75,9 +75,12 @@
       <div class="card">
         <h2>食事を記録</h2>
         <p class="hint">料理名で検索してタップすると記録されます。カロリーは1人前の目安です。</p>
-        <div class="field">
-          <label for="meal-date">日付</label>
+        <label class="meal-date-label">記録する日</label>
+        <div class="meal-day-nav">
+          <button id="meal-prev" class="daybtn" aria-label="前日">‹</button>
           <input type="date" id="meal-date" />
+          <button id="meal-next" class="daybtn" aria-label="翌日">›</button>
+          <button id="meal-today" class="meal-today-btn">今日</button>
         </div>
         <div class="meal-search-row">
           <input type="search" id="meal-search" placeholder="例: ごはん、からあげ、ビール" />

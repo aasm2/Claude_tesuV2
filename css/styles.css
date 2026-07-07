@@ -306,6 +306,42 @@ main { padding: 14px; }
 .empty { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
 
 /* ---- 食事タブ ---- */
+.meal-date-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.meal-day-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.meal-day-nav input[type="date"] {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: 16px;
+  background: var(--card-2);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+}
+.meal-day-nav input[type="date"]:focus { outline: none; border-color: var(--accent); }
+.daybtn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 10px;
+  color: var(--accent-2);
+  font-size: 20px;
+  font-weight: 700;
+}
+.daybtn:active { background: var(--card-2); }
+.meal-today-btn {
+  flex: none;
+  padding: 0 14px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
 .meal-search-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .meal-search-row input[type="search"] {
   flex: 1;

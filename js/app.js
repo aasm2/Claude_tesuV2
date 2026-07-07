@@ -82,7 +82,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.querySelectorAll('.tab-panel').forEach((p) => {
       p.classList.toggle('is-active', p.id === `tab-${name}`);
     });
-    if (name === 'meal') renderMealDay();
+    if (name === 'meal') openMealTab();
     if (name === 'graph') renderGraph();
     if (name === 'calendar') renderCalendar();
     if (name === 'list') renderList();
@@ -293,6 +293,23 @@ mealSearch.addEventListener('input', () => {
 });
 
 mealDate.addEventListener('change', renderMealDay);
+
+// 食事タブを開くたびに「本当の今日」に合わせる（PWAが起動しっぱなしでも正しい日に記録するため）
+function openMealTab() {
+  mealDate.value = todayISO();
+  renderMealDay();
+}
+
+// 記録先の日付を1日ずらす
+function shiftMealDate(delta) {
+  const d = new Date(`${mealDate.value || todayISO()}T00:00:00`);
+  d.setDate(d.getDate() + delta);
+  mealDate.value = toISO(d);
+  renderMealDay();
+}
+$('#meal-prev').addEventListener('click', () => shiftMealDate(-1));
+$('#meal-next').addEventListener('click', () => shiftMealDate(1));
+$('#meal-today').addEventListener('click', () => { mealDate.value = todayISO(); renderMealDay(); });
 
 $('#free-add').addEventListener('click', () => {
   const name = $('#free-name').value.trim();
