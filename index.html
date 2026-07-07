@@ -97,6 +97,34 @@
             <button id="free-add" class="btn-ghost">追加</button>
           </div>
         </details>
+
+        <label class="filebtn mt">
+          <input type="file" id="meal-photo-input" accept="image/*" />
+          <span>📷 写真で記録（食事・栄養表示）</span>
+        </label>
+        <p class="hint mini">食事や栄養成分表示を撮ると、栄養表示ならカロリーを自動で読み取ります。写真も保存できます。</p>
+
+        <div id="meal-photo-status" class="ocr-status" hidden>
+          <div class="spinner"></div>
+          <span id="meal-photo-status-text">読み取り中…</span>
+        </div>
+
+        <div id="meal-photo-confirm" class="mp-confirm" hidden>
+          <img id="meal-photo-preview" alt="プレビュー" />
+          <div class="field">
+            <label for="mp-name">名前</label>
+            <input type="text" id="mp-name" placeholder="例: ハンバーグ弁当" />
+          </div>
+          <div class="field">
+            <label for="mp-kcal">カロリー (kcal)</label>
+            <input type="number" id="mp-kcal" inputmode="numeric" placeholder="480" />
+          </div>
+          <label class="mp-keep"><input type="checkbox" id="mp-keep" checked /> この写真を保存して後で見返す</label>
+          <div class="actions">
+            <button id="mp-save" class="btn-primary">記録</button>
+            <button id="mp-cancel" class="btn-ghost">やめる</button>
+          </div>
+        </div>
       </div>
       <div class="card">
         <div class="graph-head">
@@ -166,10 +194,15 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <div id="photo-modal" class="photo-modal" hidden>
+    <img id="photo-modal-img" alt="食事の写真" />
+  </div>
+
   <script src="vendor/chart.umd.js"></script>
   <script src="vendor/tesseract.min.js"></script>
   <script src="js/parse.js"></script>
   <script src="js/foods.js"></script>
+  <script src="js/idb.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

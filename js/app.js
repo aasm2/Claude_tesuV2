@@ -53,12 +53,17 @@ const MealDB = {
     this.all().forEach((m) => { t[m.date] = (t[m.date] || 0) + m.kcal; });
     return t;
   },
-  add(date, name, kcal) {
+  add(date, name, kcal, photoId) {
     const list = this.all();
-    list.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`, date, name, kcal: Math.round(kcal) });
+    const entry = { id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`, date, name, kcal: Math.round(kcal) };
+    if (photoId) entry.photoId = photoId;
+    list.push(entry);
     localStorage.setItem(MEAL_KEY, JSON.stringify(list));
+    return entry;
   },
   remove(id) {
+    const target = this.all().find((m) => m.id === id);
+    if (target && target.photoId && window.PhotoStore) PhotoStore.del(target.photoId).catch(() => {});
     localStorage.setItem(MEAL_KEY, JSON.stringify(this.all().filter((m) => m.id !== id)));
   },
 };
@@ -310,8 +315,10 @@ function renderMealDay() {
 
   meals.forEach((m) => {
     const row = document.createElement('div');
-    row.className = 'list-row';
+    row.className = 'list-row meal-row';
+    const thumb = m.photoId ? '<img class="meal-thumb" alt="写真" />' : '';
     row.innerHTML = `
+      ${thumb}
       <div class="ld">${m.name}</div>
       <div><span class="lw">${m.kcal.toLocaleString()}</span><span class="diff"> kcal</span></div>
       <button class="ldel" data-id="${m.id}" aria-label="削除">🗑</button>
@@ -320,9 +327,102 @@ function renderMealDay() {
       MealDB.remove(m.id);
       renderMealDay();
     });
+    if (m.photoId) {
+      const img = row.querySelector('.meal-thumb');
+      PhotoStore.get(m.photoId).then((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        img.src = url;
+        img.addEventListener('click', () => openPhoto(url));
+      }).catch(() => {});
+    }
     box.appendChild(row);
   });
 }
+
+/* ---- 写真で記録（食事・栄養表示） ---- */
+const mpInput = $('#meal-photo-input');
+const mpStatus = $('#meal-photo-status');
+const mpStatusText = $('#meal-photo-status-text');
+const mpConfirm = $('#meal-photo-confirm');
+const mpPreview = $('#meal-photo-preview');
+let mpBlob = null; // 保存対象の縮小済み画像
+
+mpInput.addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  mpConfirm.hidden = true;
+  mpStatus.hidden = false;
+  mpStatusText.textContent = '画像を処理中…';
+  try {
+    mpBlob = await downscaleImage(file);
+    mpPreview.src = URL.createObjectURL(mpBlob);
+    // 栄養成分表示ならカロリーを読み取る（食事写真なら見つからず空欄のまま）
+    mpStatusText.textContent = 'カロリーを読み取り中…';
+    let kcal = null;
+    try {
+      const { data } = await Tesseract.recognize(mpBlob, 'eng+jpn', {
+        workerPath: 'vendor/worker.min.js',
+        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.0.0',
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      });
+      kcal = OcrParse.extractKcal(data.text || '');
+    } catch (err) {
+      console.warn('kcal OCR失敗', err);
+    }
+    $('#mp-name').value = '';
+    $('#mp-kcal').value = kcal == null ? '' : kcal;
+    $('#mp-keep').checked = true;
+    mpStatus.hidden = true;
+    mpConfirm.hidden = false;
+    mpStatusText.textContent = kcal != null ? `カロリー ${kcal}kcal を読み取りました` : '';
+    mpConfirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (err) {
+    console.error(err);
+    mpStatus.hidden = true;
+    showToast('画像を読み込めませんでした');
+  }
+});
+
+$('#mp-cancel').addEventListener('click', resetMealPhoto);
+
+$('#mp-save').addEventListener('click', async () => {
+  const name = $('#mp-name').value.trim() || '写真の記録';
+  const kcal = parseFloat($('#mp-kcal').value);
+  if (!kcal || kcal <= 0 || kcal > 5000) {
+    showToast('カロリーを入力してください');
+    return;
+  }
+  let photoId = null;
+  if ($('#mp-keep').checked && mpBlob) {
+    photoId = `p-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    try {
+      await PhotoStore.put(photoId, mpBlob);
+    } catch (err) {
+      console.error('写真保存失敗', err);
+      photoId = null;
+    }
+  }
+  MealDB.add(mealDate.value, name, kcal, photoId);
+  resetMealPhoto();
+  renderMealDay();
+  showToast('記録しました');
+});
+
+function resetMealPhoto() {
+  mpConfirm.hidden = true;
+  mpStatus.hidden = true;
+  mpInput.value = '';
+  mpBlob = null;
+}
+
+/* ---- 写真ビューア ---- */
+const photoModal = $('#photo-modal');
+function openPhoto(url) {
+  $('#photo-modal-img').src = url;
+  photoModal.hidden = false;
+}
+photoModal.addEventListener('click', () => { photoModal.hidden = true; });
 
 $('#meal-export').addEventListener('click', () => {
   const list = MealDB.all().sort((a, b) => a.date.localeCompare(b.date));

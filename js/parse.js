@@ -236,7 +236,27 @@
     }];
   }
 
-  const api = { parseOcrText };
+  /**
+   * 栄養成分表示の写真OCRから「エネルギー ○○ kcal」を拾う。
+   * 直接 kcal に付いた数字を最優先し、無ければ「エネルギー/熱量」付近の数字。
+   */
+  function extractKcal(text) {
+    const c = normalize(text);
+    let m;
+    const reKcal = /(\d{1,4})\s*(?:kcal|ｋｃａｌ|キロカロリー)/ig;
+    while ((m = reKcal.exec(c)) !== null) {
+      const v = +m[1];
+      if (v >= 1 && v <= 4000) return v;
+    }
+    m = c.match(/(?:エネルギー|熱量|カロリー)\D{0,8}(\d{1,4})/i);
+    if (m) {
+      const v = +m[1];
+      if (v >= 1 && v <= 4000) return v;
+    }
+    return null;
+  }
+
+  const api = { parseOcrText, extractKcal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else globalThis.OcrParse = api;
 })();
