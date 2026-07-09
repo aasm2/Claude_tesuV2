@@ -101,8 +101,10 @@
           </div>
         </details>
 
+        <button id="clip-import" class="btn-ghost btn-block mt">📋 クリップボードから取り込み</button>
+
         <details class="paste-input">
-          <summary>📋 テキストを貼り付けて記録</summary>
+          <summary>テキストを貼り付けて記録</summary>
           <p class="hint mini">チャット等で下の形式にまとめてもらい、貼り付けて解析します（1行＝「料理名 カロリー」。先頭に日付があればその日に保存）。</p>
           <textarea id="paste-text" rows="6" placeholder="2026-07-07&#10;目玉焼き 90&#10;ごはん 240&#10;みそ汁 40&#10;唐揚げ弁当 720"></textarea>
           <button id="paste-parse" class="btn-ghost btn-block">解析する</button>
@@ -140,7 +142,10 @@
       <div class="card">
         <div class="graph-head">
           <h2 id="meal-day-title">この日の食事</h2>
-          <div class="meal-total"><span id="meal-total">0</span> kcal</div>
+          <div class="meal-meta">
+            <span class="meal-total"><span id="meal-total">0</span> kcal</span>
+            <span id="meal-score" class="meal-score" hidden></span>
+          </div>
         </div>
         <div id="meal-list" class="list"></div>
         <p id="meal-empty" class="empty" hidden>まだ記録がありません。</p>

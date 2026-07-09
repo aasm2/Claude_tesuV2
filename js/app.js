@@ -68,6 +68,20 @@ const MealDB = {
   },
 };
 
+// 日別の食事スコア（クロちゃんの点数）。同日は上書き。
+const SCORE_KEY = 'meal-scores-v1';
+const ScoreDB = {
+  all() {
+    try { return JSON.parse(localStorage.getItem(SCORE_KEY)) || {}; } catch { return {}; }
+  },
+  get(date) { return this.all()[date]; },
+  set(date, score) {
+    const m = this.all();
+    m[date] = score;
+    localStorage.setItem(SCORE_KEY, JSON.stringify(m));
+  },
+};
+
 /* ---------------- ユーティリティ ---------------- */
 const $ = (sel) => document.querySelector(sel);
 const pad = (n) => String(n).padStart(2, '0');
@@ -312,29 +326,60 @@ $('#meal-prev').addEventListener('click', () => shiftMealDate(-1));
 $('#meal-next').addEventListener('click', () => shiftMealDate(1));
 $('#meal-today').addEventListener('click', () => { mealDate.value = todayISO(); renderMealDay(); });
 
-/* ---- テキストを貼り付けて記録 ---- */
-$('#paste-parse').addEventListener('click', () => {
-  const res = OcrParse.parseMealTemplate($('#paste-text').value);
+/* ---- テキスト/クリップボードから取り込み ---- */
+function renderImportPreview(res) {
   const box = $('#paste-preview');
   box.hidden = false;
-  if (!res.items.length) {
-    box.innerHTML = '<p class="empty">読み取れませんでした。1行に「料理名 カロリー」の形式で書いてください。</p>';
+  const date = res.date || mealDate.value || todayISO();
+  const rows = [];
+  res.items.forEach((i) => rows.push(`<div class="paste-item"><span>${escapeHtml(i.name)}</span><span>${i.kcal.toLocaleString()}kcal</span></div>`));
+  if (res.weight != null) rows.push(`<div class="paste-item"><span>体重</span><span>${res.weight}kg</span></div>`);
+  if (res.bodyFat != null) rows.push(`<div class="paste-item"><span>体脂肪率</span><span>${res.bodyFat}%</span></div>`);
+  if (res.score != null) rows.push(`<div class="paste-item"><span>点数</span><span>${res.score}点</span></div>`);
+
+  if (!rows.length) {
+    box.innerHTML = '<p class="empty">読み取れませんでした。「料理名 カロリー」「体重 53.2」「点数 82」などの形式にしてください。</p>';
     return;
   }
-  const date = res.date || mealDate.value || todayISO();
   const total = res.items.reduce((s, i) => s + i.kcal, 0);
-  box.innerHTML = `<p class="hint mini"><b>${date}</b> に ${res.items.length}件（合計 ${total.toLocaleString()}kcal）を保存します</p>`
-    + res.items.map((i) => `<div class="paste-item"><span>${escapeHtml(i.name)}</span><span>${i.kcal.toLocaleString()}kcal</span></div>`).join('')
+  box.innerHTML = `<p class="hint mini"><b>${date}</b> に保存します</p>`
+    + rows.join('')
     + '<button id="paste-save" class="btn-primary btn-block">この内容で保存</button>';
   box.querySelector('#paste-save').addEventListener('click', () => {
     res.items.forEach((i) => MealDB.add(date, i.name, i.kcal));
+    if (res.weight != null) DB.save(date, res.weight, res.bodyFat != null ? res.bodyFat : '');
+    if (res.score != null) ScoreDB.set(date, res.score);
     $('#paste-text').value = '';
     box.hidden = true;
     box.innerHTML = '';
     mealDate.value = date;
     renderMealDay();
-    showToast(`${res.items.length}件保存しました`);
+    const bits = [];
+    if (res.items.length) bits.push(`食事${res.items.length}件`);
+    if (res.weight != null) bits.push('体重');
+    if (res.score != null) bits.push('点数');
+    showToast(`${bits.join('・') || 'データ'}を保存しました`);
   });
+}
+
+$('#paste-parse').addEventListener('click', () => {
+  renderImportPreview(OcrParse.parseMealTemplate($('#paste-text').value));
+});
+
+$('#clip-import').addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()) { showToast('クリップボードが空です'); return; }
+    $('#paste-text').value = text;
+    const details = document.querySelector('.paste-input');
+    if (details) details.open = true;
+    renderImportPreview(OcrParse.parseMealTemplate(text));
+  } catch (err) {
+    console.warn('clipboard読み取り失敗', err);
+    showToast('クリップボードを読めませんでした。貼り付け欄に貼ってください');
+    const details = document.querySelector('.paste-input');
+    if (details) details.open = true;
+  }
 });
 
 $('#free-add').addEventListener('click', () => {
@@ -355,6 +400,10 @@ function renderMealDay() {
   box.innerHTML = '';
   $('#meal-empty').hidden = meals.length > 0;
   $('#meal-total').textContent = meals.reduce((s, m) => s + m.kcal, 0).toLocaleString();
+  const score = ScoreDB.get(date);
+  const scoreEl = $('#meal-score');
+  scoreEl.hidden = score == null;
+  if (score != null) scoreEl.textContent = `${score}点`;
 
   meals.forEach((m) => {
     const row = document.createElement('div');
@@ -653,6 +702,7 @@ function renderCalendar() {
     }
   });
   const kcalByDate = MealDB.totals();
+  const scoreByDate = ScoreDB.all();
 
   const cal = $('#calendar');
   cal.innerHTML = '';
@@ -682,7 +732,9 @@ function renderCalendar() {
       + (iso === today ? ' today' : '')
       + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
     const kc = kcalByDate[iso];
+    const sc = scoreByDate[iso];
     el.innerHTML = `<span class="d">${cur.getDate()}</span>`
+      + (sc != null ? `<span class="cs">${sc}点</span>` : '')
       + (kc !== undefined ? `<span class="kc">${kc.toLocaleString()}</span>` : '');
     cal.appendChild(el);
     if (byDate[iso] !== undefined) {
