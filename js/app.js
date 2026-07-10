@@ -53,13 +53,25 @@ const MealDB = {
     this.all().forEach((m) => { t[m.date] = (t[m.date] || 0) + m.kcal; });
     return t;
   },
-  add(date, name, kcal, photoId) {
+  add(date, name, kcal, opts = {}) {
     const list = this.all();
     const entry = { id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`, date, name, kcal: Math.round(kcal) };
-    if (photoId) entry.photoId = photoId;
+    if (opts.photoId) entry.photoId = opts.photoId;
+    if (opts.slot) entry.slot = opts.slot;       // 朝/昼/夜/間食
+    if (opts.place) entry.place = opts.place;    // {type:'外食', label} / {type:'自炊'}
     list.push(entry);
     localStorage.setItem(MEAL_KEY, JSON.stringify(list));
     return entry;
+  },
+  update(id, fields) {
+    const list = this.all();
+    const m = list.find((e) => e.id === id);
+    if (!m) return;
+    if (fields.name != null) m.name = fields.name;
+    if (fields.kcal != null) m.kcal = Math.round(fields.kcal);
+    if ('slot' in fields) { if (fields.slot) m.slot = fields.slot; else delete m.slot; }
+    if ('place' in fields) { if (fields.place) m.place = fields.place; else delete m.place; }
+    localStorage.setItem(MEAL_KEY, JSON.stringify(list));
   },
   remove(id) {
     const target = this.all().find((m) => m.id === id);
@@ -332,6 +344,10 @@ function renderImportPreview(res) {
   box.hidden = false;
   const date = res.date || mealDate.value || todayISO();
   const rows = [];
+  const ctxBits = [];
+  if (res.slot) ctxBits.push(res.slot);
+  if (res.place) ctxBits.push(res.place.type === '外食' ? `外食(${res.place.label || ''})` : '自炊');
+  if (ctxBits.length) rows.push(`<div class="paste-item"><span>区分</span><span>${escapeHtml(ctxBits.join('・'))}</span></div>`);
   res.items.forEach((i) => rows.push(`<div class="paste-item"><span>${escapeHtml(i.name)}</span><span>${i.kcal.toLocaleString()}kcal</span></div>`));
   if (res.weight != null) rows.push(`<div class="paste-item"><span>体重</span><span>${res.weight}kg</span></div>`);
   if (res.bodyFat != null) rows.push(`<div class="paste-item"><span>体脂肪率</span><span>${res.bodyFat}%</span></div>`);
@@ -346,7 +362,7 @@ function renderImportPreview(res) {
     + rows.join('')
     + '<button id="paste-save" class="btn-primary btn-block">この内容で保存</button>';
   box.querySelector('#paste-save').addEventListener('click', () => {
-    res.items.forEach((i) => MealDB.add(date, i.name, i.kcal));
+    res.items.forEach((i) => MealDB.add(date, i.name, i.kcal, { slot: res.slot, place: res.place }));
     if (res.weight != null) DB.save(date, res.weight, res.bodyFat != null ? res.bodyFat : '');
     if (res.score != null) ScoreDB.set(date, res.score);
     $('#paste-text').value = '';
@@ -411,14 +427,16 @@ function renderMealDay() {
     const thumb = m.photoId ? '<img class="meal-thumb" alt="写真" />' : '';
     row.innerHTML = `
       ${thumb}
-      <div class="ld">${escapeHtml(m.name)}</div>
+      <div class="ld">${escapeHtml(m.name)}${mealTagHtml(m)}</div>
       <div><span class="lw">${m.kcal.toLocaleString()}</span><span class="diff"> kcal</span></div>
       <button class="ldel" data-id="${m.id}" aria-label="削除">🗑</button>
     `;
-    row.querySelector('.ldel').addEventListener('click', () => {
+    row.querySelector('.ldel').addEventListener('click', (e) => {
+      e.stopPropagation();
       MealDB.remove(m.id);
       renderMealDay();
     });
+    row.querySelector('.ld').addEventListener('click', () => openMealEdit(m.id));
     if (m.photoId) {
       const img = row.querySelector('.meal-thumb');
       PhotoStore.get(m.photoId).then((blob) => {
@@ -431,6 +449,53 @@ function renderMealDay() {
     box.appendChild(row);
   });
 }
+
+// 食事の時間帯・外食/自炊タグ（小さなラベル）
+function mealTagHtml(m) {
+  const bits = [];
+  if (m.slot) bits.push(m.slot);
+  if (m.place) bits.push(m.place.type === '外食' ? `外食${m.place.label ? `(${m.place.label})` : ''}` : '自炊');
+  return bits.length ? `<span class="meal-tag">${escapeHtml(bits.join('・'))}</span>` : '';
+}
+
+// タブをコードから切り替える
+function switchTab(name) {
+  const btn = document.querySelector(`.tab[data-tab="${name}"]`);
+  if (btn) btn.click();
+}
+
+/* ---- 食事の編集モーダル ---- */
+let editingMealId = null;
+function openMealEdit(id) {
+  const m = MealDB.all().find((e) => e.id === id);
+  if (!m) return;
+  editingMealId = id;
+  $('#me-name').value = m.name;
+  $('#me-kcal').value = m.kcal;
+  $('#me-slot').value = m.slot || '';
+  $('#me-place').value = m.place ? m.place.type : '';
+  $('#me-label').value = (m.place && m.place.label) || '';
+  $('#me-label').parentElement.hidden = !(m.place && m.place.type === '外食');
+  $('#meal-edit').hidden = false;
+}
+$('#me-place').addEventListener('change', () => {
+  $('#me-label').parentElement.hidden = $('#me-place').value !== '外食';
+});
+$('#me-cancel').addEventListener('click', () => { $('#meal-edit').hidden = true; });
+$('#me-save').addEventListener('click', () => {
+  const name = $('#me-name').value.trim();
+  const kcal = parseFloat($('#me-kcal').value);
+  if (!name || !kcal || kcal <= 0 || kcal > 5000) { showToast('名前とカロリーを確認してください'); return; }
+  const placeType = $('#me-place').value;
+  const place = placeType === '外食'
+    ? { type: '外食', label: $('#me-label').value.trim() }
+    : placeType === '自炊' ? { type: '自炊' } : null;
+  MealDB.update(editingMealId, { name, kcal, slot: $('#me-slot').value || null, place });
+  $('#meal-edit').hidden = true;
+  renderMealDay();
+  if (document.querySelector('#tab-list.is-active')) renderList();
+  showToast('更新しました');
+});
 
 /* ---- 写真で記録（食事・栄養表示） ---- */
 const mpInput = $('#meal-photo-input');
@@ -495,7 +560,7 @@ $('#mp-save').addEventListener('click', async () => {
       photoId = null;
     }
   }
-  MealDB.add(mealDate.value, name, kcal, photoId);
+  MealDB.add(mealDate.value, name, kcal, { photoId });
   resetMealPhoto();
   renderMealDay();
   showToast('記録しました');
@@ -689,6 +754,30 @@ function calRange(sorted) {
   return { start, end };
 }
 
+let calMode = 'weight'; // 'weight' | 'meal'
+document.querySelectorAll('#cal-seg .seg-btn').forEach((b) => {
+  b.addEventListener('click', () => {
+    calMode = b.dataset.mode;
+    document.querySelectorAll('#cal-seg .seg-btn').forEach((x) => x.classList.toggle('is-on', x === b));
+    renderCalendar();
+  });
+});
+
+// その日の食事を「朝 自炊」「夜 外食(店名)」の行にまとめる
+function mealDaySummary(meals) {
+  const lines = [];
+  for (const slot of ['朝', '昼', '夜', '間食']) {
+    const ms = meals.filter((m) => m.slot === slot);
+    if (!ms.length) continue;
+    const withPlace = ms.find((m) => m.place);
+    let p = '';
+    if (withPlace) p = withPlace.place.type === '外食' ? `外食${withPlace.place.label ? `(${withPlace.place.label})` : ''}` : '自炊';
+    lines.push(p ? `${slot} ${p}` : slot);
+  }
+  if (!lines.length && meals.length) lines.push('記録');
+  return lines;
+}
+
 // 月の区切りをやめ、週が連続する縦スクロールのカレンダーを描く
 function renderCalendar() {
   const sorted = DB.all();
@@ -731,13 +820,28 @@ function renderCalendar() {
     el.className = 'cal-cell'
       + (iso === today ? ' today' : '')
       + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
-    const kc = kcalByDate[iso];
-    const sc = scoreByDate[iso];
-    el.innerHTML = `<span class="d">${cur.getDate()}</span>`
-      + (sc != null ? `<span class="cs">${sc}点</span>` : '')
-      + (kc !== undefined ? `<span class="kc">${kc.toLocaleString()}</span>` : '');
+    if (calMode === 'meal') {
+      const dayMeals = MealDB.byDate(iso);
+      const lines = mealDaySummary(dayMeals).map((l) => `<span class="ml">${escapeHtml(l)}</span>`).join('');
+      el.innerHTML = `<span class="d">${cur.getDate()}</span>${lines}`;
+      if (dayMeals.length) {
+        el.classList.add('has-meal');
+        const dateISO = iso;
+        el.addEventListener('click', () => {
+          switchTab('meal'); // ※タブ切替は日付を今日に戻すので、先に切替えてから目的の日へ
+          mealDate.value = dateISO;
+          renderMealDay();
+        });
+      }
+    } else {
+      const kc = kcalByDate[iso];
+      const sc = scoreByDate[iso];
+      el.innerHTML = `<span class="d">${cur.getDate()}</span>`
+        + (sc != null ? `<span class="cs">${sc}点</span>` : '')
+        + (kc !== undefined ? `<span class="kc">${kc.toLocaleString()}</span>` : '');
+    }
     cal.appendChild(el);
-    if (byDate[iso] !== undefined) {
+    if (calMode !== 'meal' && byDate[iso] !== undefined) {
       weighted.push({ el, w: byDate[iso], weekRow: weekIndex, up: dirByDate[iso] === 'up' });
     }
     cur.setDate(cur.getDate() + 1);
@@ -805,7 +909,17 @@ function drawCalGraph(items) {
 /* =========================================================
    一覧 / CSV
    ========================================================= */
+let listMode = 'weight'; // 'weight' | 'meal'
+document.querySelectorAll('#list-seg .seg-btn').forEach((b) => {
+  b.addEventListener('click', () => {
+    listMode = b.dataset.mode;
+    document.querySelectorAll('#list-seg .seg-btn').forEach((x) => x.classList.toggle('is-on', x === b));
+    renderList();
+  });
+});
+
 function renderList() {
+  if (listMode === 'meal') { renderMealList(); return; }
   const list = DB.all().slice().reverse(); // 新しい順
   const box = $('#list');
   const empty = $('#list-empty');
@@ -847,7 +961,45 @@ function renderList() {
   });
 }
 
+// 日付ごとにグループした食事一覧（タップで編集）
+function renderMealList() {
+  const box = $('#list');
+  const empty = $('#list-empty');
+  box.innerHTML = '';
+  const meals = MealDB.all().slice().sort((a, b) => b.date.localeCompare(a.date));
+  if (meals.length === 0) { empty.hidden = false; return; }
+  empty.hidden = true;
+
+  const scores = ScoreDB.all();
+  let curDate = '';
+  meals.forEach((m) => {
+    if (m.date !== curDate) {
+      curDate = m.date;
+      const total = MealDB.byDate(curDate).reduce((s, x) => s + x.kcal, 0);
+      const sc = scores[curDate];
+      const h = document.createElement('div');
+      h.className = 'meal-date-head';
+      h.innerHTML = `<span>${curDate}</span><span>${total.toLocaleString()}kcal${sc != null ? ` ・ ${sc}点` : ''}</span>`;
+      box.appendChild(h);
+    }
+    const row = document.createElement('div');
+    row.className = 'list-row meal-row';
+    row.innerHTML = `
+      <div class="ld">${escapeHtml(m.name)}${mealTagHtml(m)}</div>
+      <div><span class="lw">${m.kcal.toLocaleString()}</span><span class="diff"> kcal</span></div>
+      <button class="ldel" aria-label="削除">🗑</button>
+    `;
+    row.querySelector('.ldel').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`「${m.name}」を削除しますか？`)) { MealDB.remove(m.id); renderList(); }
+    });
+    row.querySelector('.ld').addEventListener('click', () => openMealEdit(m.id));
+    box.appendChild(row);
+  });
+}
+
 $('#export-btn').addEventListener('click', () => {
+  if (listMode === 'meal') { $('#meal-export').click(); return; }
   const list = DB.all();
   if (list.length === 0) { alert('データがありません'); return; }
   const csv = 'date,weight,bodyFat\n' + list.map((e) => `${e.date},${e.weight},${e.bodyFat ?? ''}`).join('\n');

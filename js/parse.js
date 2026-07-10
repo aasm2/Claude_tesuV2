@@ -270,10 +270,18 @@
     let weight = null;
     let bodyFat = null;
     let score = null;
+    let slot = null;   // 朝/昼/夜/間食
+    let place = null;  // {type:'外食', label:'鳥貴族'} または {type:'自炊'}
     const items = [];
     const num = (s) => parseFloat(String(s).replace(',', '.'));
     for (const raw of lines) {
       if (/^#?\s*体重ログ/.test(raw)) continue; // 目印行
+
+      const tm = raw.match(/^時\s*間\s*帯[\s:：]*(朝|昼|夜|間食)/);
+      if (tm) { slot = tm[1]; continue; }
+      const gm = raw.match(/^外\s*食[\s:：]*(.+)$/);
+      if (gm) { place = { type: '外食', label: gm[1].trim() }; continue; }
+      if (/^自\s*炊\s*$/.test(raw)) { place = { type: '自炊' }; continue; }
 
       const dl = raw.match(/^(?:日付|date)?\s*[:：]?\s*(20\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})\s*(?:[(（][^)）]*[)）])?\s*$/i);
       if (dl) { if (date === null) date = `${dl[1]}-${pad(+dl[2])}-${pad(+dl[3])}`; continue; }
@@ -297,7 +305,7 @@
       if (!name) continue;
       items.push({ name, kcal });
     }
-    return { date, items, weight, bodyFat, score };
+    return { date, items, weight, bodyFat, score, slot, place };
   }
 
   const api = { parseOcrText, extractKcal, parseMealTemplate };

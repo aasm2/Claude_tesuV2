@@ -176,6 +176,10 @@
     <!-- ============ カレンダータブ ============ -->
     <section id="tab-calendar" class="tab-panel">
       <div class="card">
+        <div class="seg cal-seg" id="cal-seg">
+          <button class="seg-btn is-on" data-mode="weight">体重</button>
+          <button class="seg-btn" data-mode="meal">食事</button>
+        </div>
         <div class="cal-scroll">
           <div class="cal-dow-row">
             <span class="cal-dow sun">日</span>
@@ -199,7 +203,10 @@
     <section id="tab-list" class="tab-panel">
       <div class="card">
         <div class="graph-head">
-          <h2>記録一覧</h2>
+          <div class="seg" id="list-seg">
+            <button class="seg-btn is-on" data-mode="weight">体重</button>
+            <button class="seg-btn" data-mode="meal">食事</button>
+          </div>
           <button id="export-btn" class="btn-ghost">CSV出力</button>
         </div>
         <div id="list" class="list"></div>
@@ -207,6 +214,35 @@
       </div>
     </section>
   </main>
+
+  <div id="meal-edit" class="modal" hidden>
+    <div class="modal-card">
+      <h2>食事を編集</h2>
+      <div class="field"><label for="me-name">名前</label><input type="text" id="me-name" /></div>
+      <div class="field"><label for="me-kcal">カロリー (kcal)</label><input type="number" id="me-kcal" inputmode="numeric" /></div>
+      <div class="field"><label for="me-slot">時間帯</label>
+        <select id="me-slot" class="modal-select">
+          <option value="">指定なし</option>
+          <option value="朝">朝</option>
+          <option value="昼">昼</option>
+          <option value="夜">夜</option>
+          <option value="間食">間食</option>
+        </select>
+      </div>
+      <div class="field"><label for="me-place">外食 / 自炊</label>
+        <select id="me-place" class="modal-select">
+          <option value="">指定なし</option>
+          <option value="外食">外食</option>
+          <option value="自炊">自炊</option>
+        </select>
+      </div>
+      <div class="field"><label for="me-label">店名・系統</label><input type="text" id="me-label" placeholder="例: 鳥貴族、ラーメン" /></div>
+      <div class="actions">
+        <button id="me-save" class="btn-primary">保存</button>
+        <button id="me-cancel" class="btn-ghost">キャンセル</button>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
