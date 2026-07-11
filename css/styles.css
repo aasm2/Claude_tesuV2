@@ -294,6 +294,10 @@ main { padding: 14px; }
 .cal-graph .cg-dot { fill: #fff; stroke: var(--accent); stroke-width: 2; }
 .cal-graph .cg-label { font-size: 10px; font-weight: 800; fill: var(--accent-2); }
 .cal-graph .cg-label.up { fill: var(--danger); }
+.cal-graph .cg-bar { fill: rgba(242, 128, 60, .45); }
+.cal-graph .cg-kline { fill: none; stroke: var(--kcal); stroke-width: 2; }
+.cal-graph .cg-kdot { fill: #fff; stroke: var(--kcal); stroke-width: 2; }
+.cal-graph .cg-kcal { font-size: 8px; font-weight: 800; fill: var(--kcal); }
 
 .cal-hint { text-align: center; font-size: 11px; color: var(--muted); margin-top: 10px; }
 

@@ -855,6 +855,7 @@ function renderCalendar() {
 
   const today = todayISO();
   const weighted = [];
+  const kcalItems = [];
   let shownMonth = '';
   let weekIndex = -1;
 
@@ -892,20 +893,24 @@ function renderCalendar() {
         });
       }
     } else {
-      const kc = kcalByDate[iso];
       const sc = scoreByDate[iso];
+      // 下のオレンジバッジには1日の点数を表示（カロリーはグラフで描く）
       el.innerHTML = `<span class="d">${cur.getDate()}</span>`
-        + (sc != null ? `<span class="cs">${sc}点</span>` : '')
-        + (kc !== undefined ? `<span class="kc">${kc.toLocaleString()}</span>` : '');
+        + (sc != null ? `<span class="kc">${sc}点</span>` : '');
     }
     cal.appendChild(el);
-    if (calMode !== 'meal' && byDate[iso] !== undefined) {
-      weighted.push({ el, w: byDate[iso], weekRow: weekIndex, up: dirByDate[iso] === 'up' });
+    if (calMode !== 'meal') {
+      if (byDate[iso] !== undefined) {
+        weighted.push({ el, w: byDate[iso], weekRow: weekIndex, up: dirByDate[iso] === 'up' });
+      }
+      if (kcalByDate[iso]) {
+        kcalItems.push({ el, k: kcalByDate[iso], weekRow: weekIndex });
+      }
     }
     cur.setDate(cur.getDate() + 1);
   }
 
-  drawCalGraph(weighted);
+  drawCalGraph(weighted, kcalItems);
   // 月ビューは最新（今日）が見えるよう一番下までスクロール
   if (!isWeek) {
     const sc = document.querySelector('.cal-scroll');
@@ -913,26 +918,29 @@ function renderCalendar() {
   }
 }
 
-// カレンダーの上に体重の折れ線グラフ(SVG)を重ねて描く
-function drawCalGraph(items) {
+// カレンダーの上に体重の折れ線とカロリーのグラフ(SVG)を重ねて描く
+function drawCalGraph(items, kcalItems = []) {
   const svg = $('#cal-graph');
   svg.innerHTML = '';
   const wrap = svg.parentElement;
   const W = wrap.clientWidth;
   const H = wrap.clientHeight;
-  if (!items.length || !W) return;
+  if ((!items.length && !kcalItems.length) || !W) return;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const NS = 'http://www.w3.org/2000/svg';
+  drawKcalGraph(svg, kcalItems, NS); // 先に描いて体重線を上に重ねる
+  if (!items.length) return;
 
   const ws = items.map((it) => it.w);
   const min = Math.min(...ws);
   const span = (Math.max(...ws) - min) || 1;
-  const NS = 'http://www.w3.org/2000/svg';
 
   items.forEach((it) => {
     const el = it.el;
     it.x = el.offsetLeft + el.offsetWidth / 2;
     const frac = (it.w - min) / span; // 0(最小)〜1(最大)
-    it.y = el.offsetTop + el.offsetHeight * 0.82 - frac * (el.offsetHeight * 0.46);
+    it.y = el.offsetTop + el.offsetHeight * 0.60 - frac * (el.offsetHeight * 0.30);
   });
 
   // 折れ線は同じ週(行)の中だけ結ぶ
@@ -961,6 +969,66 @@ function drawCalGraph(items) {
     t.setAttribute('text-anchor', 'middle');
     t.setAttribute('class', 'cg-label' + (it.up ? ' up' : ''));
     t.textContent = it.w.toFixed(1);
+    svg.appendChild(t);
+  });
+}
+
+// カロリーのグラフ（マス下部の帯に描く）。KCAL_STYLE: 'bar'（棒）| 'line'（折れ線）
+function drawKcalGraph(svg, kcalItems, NS) {
+  if (!kcalItems.length) return;
+  const style = window.KCAL_STYLE || 'bar';
+  const maxK = Math.max(...kcalItems.map((i) => i.k));
+
+  kcalItems.forEach((it) => {
+    const el = it.el;
+    const cw = el.offsetWidth;
+    const ch = el.offsetHeight;
+    it.x = el.offsetLeft + cw / 2;
+    it.base = el.offsetTop + ch - 20;           // 下の点数バッジ分を空ける
+    it.h = Math.max(3, (it.k / maxK) * (ch * 0.24));
+  });
+
+  if (style === 'bar') {
+    kcalItems.forEach((it) => {
+      const el = it.el;
+      const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', el.offsetLeft + el.offsetWidth * 0.2);
+      r.setAttribute('width', el.offsetWidth * 0.6);
+      r.setAttribute('y', it.base - it.h);
+      r.setAttribute('height', it.h);
+      r.setAttribute('rx', '2.5');
+      r.setAttribute('class', 'cg-bar');
+      svg.appendChild(r);
+    });
+  } else {
+    const rows = {};
+    kcalItems.forEach((it) => { (rows[it.weekRow] = rows[it.weekRow] || []).push(it); });
+    Object.values(rows).forEach((row) => {
+      if (row.length < 2) return;
+      row.sort((a, b) => a.x - b.x);
+      const pl = document.createElementNS(NS, 'polyline');
+      pl.setAttribute('points', row.map((p) => `${p.x},${p.base - p.h}`).join(' '));
+      pl.setAttribute('class', 'cg-kline');
+      svg.appendChild(pl);
+    });
+    kcalItems.forEach((it) => {
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', it.x);
+      c.setAttribute('cy', it.base - it.h);
+      c.setAttribute('r', '2.5');
+      c.setAttribute('class', 'cg-kdot');
+      svg.appendChild(c);
+    });
+  }
+
+  // kcal数値（小さく）
+  kcalItems.forEach((it) => {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', it.x);
+    t.setAttribute('y', it.base - it.h - 3);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('class', 'cg-kcal');
+    t.textContent = it.k.toLocaleString();
     svg.appendChild(t);
   });
 }
