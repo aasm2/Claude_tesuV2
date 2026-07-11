@@ -976,7 +976,7 @@ function drawCalGraph(items, kcalItems = []) {
 // カロリーのグラフ（マス下部の帯に描く）。KCAL_STYLE: 'bar'（棒）| 'line'（折れ線）
 function drawKcalGraph(svg, kcalItems, NS) {
   if (!kcalItems.length) return;
-  const style = window.KCAL_STYLE || 'bar';
+  const style = window.KCAL_STYLE || 'line';
   const maxK = Math.max(...kcalItems.map((i) => i.k));
 
   kcalItems.forEach((it) => {
