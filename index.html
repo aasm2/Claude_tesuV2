@@ -31,6 +31,15 @@
     <!-- ============ 追加タブ ============ -->
     <section id="tab-add" class="tab-panel is-active">
       <div class="card">
+        <h2>テキストを貼り付けて記録</h2>
+        <p class="hint mini">体重ブロック（体重 54.4／体脂肪 31.3）をここに貼るか、コピー済みならボタンで取り込めます。</p>
+        <button id="wpaste-clip" class="btn-ghost btn-block">📋 クリップボードから取り込み</button>
+        <textarea id="wpaste-text" class="paste-ta" rows="4" placeholder="#体重ログ&#10;2026-07-11&#10;体重 54.4&#10;体脂肪 31.3"></textarea>
+        <button id="wpaste-parse" class="btn-ghost btn-block">解析する</button>
+        <div id="wpaste-preview" class="paste-preview" hidden></div>
+      </div>
+
+      <div class="card">
         <h2>スクショから読み取り</h2>
         <p class="hint">ヘルスケア／体組成計アプリの画面を選ぶと、日付と体重を自動で読み取ります。</p>
 
@@ -73,6 +82,15 @@
     <!-- ============ 食事タブ ============ -->
     <section id="tab-meal" class="tab-panel">
       <div class="card">
+        <h2>テキストを貼り付けて記録</h2>
+        <p class="hint mini">クロちゃんのブロック（#体重ログ）をここに貼るか、コピー済みならボタンで取り込めます。</p>
+        <button id="paste-clip" class="btn-ghost btn-block">📋 クリップボードから取り込み</button>
+        <textarea id="paste-text" class="paste-ta" rows="5" placeholder="#体重ログ&#10;2026-07-09&#10;時間帯 夜&#10;外食 鳥貴族&#10;焼き鳥5本 450&#10;点数 82"></textarea>
+        <button id="paste-parse" class="btn-ghost btn-block">解析する</button>
+        <div id="paste-preview" class="paste-preview" hidden></div>
+      </div>
+
+      <div class="card">
         <h2>食事を記録</h2>
         <p class="hint">料理名で検索してタップすると記録されます。カロリーは1人前の目安です。</p>
         <label class="meal-date-label">記録する日</label>
@@ -99,16 +117,6 @@
             <input type="number" id="free-kcal" placeholder="kcal" inputmode="numeric" />
             <button id="free-add" class="btn-ghost">追加</button>
           </div>
-        </details>
-
-        <button id="clip-import" class="btn-ghost btn-block mt">📋 クリップボードから取り込み</button>
-
-        <details class="paste-input">
-          <summary>テキストを貼り付けて記録</summary>
-          <p class="hint mini">チャット等で下の形式にまとめてもらい、貼り付けて解析します（1行＝「料理名 カロリー」。先頭に日付があればその日に保存）。</p>
-          <textarea id="paste-text" rows="6" placeholder="2026-07-07&#10;目玉焼き 90&#10;ごはん 240&#10;みそ汁 40&#10;唐揚げ弁当 720"></textarea>
-          <button id="paste-parse" class="btn-ghost btn-block">解析する</button>
-          <div id="paste-preview" class="paste-preview" hidden></div>
         </details>
 
         <label class="filebtn mt">

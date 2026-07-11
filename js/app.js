@@ -338,9 +338,8 @@ $('#meal-prev').addEventListener('click', () => shiftMealDate(-1));
 $('#meal-next').addEventListener('click', () => shiftMealDate(1));
 $('#meal-today').addEventListener('click', () => { mealDate.value = todayISO(); renderMealDay(); });
 
-/* ---- テキスト/クリップボードから取り込み ---- */
-function renderImportPreview(res) {
-  const box = $('#paste-preview');
+/* ---- テキスト/クリップボードから取り込み（体重タブ・食事タブ共通） ---- */
+function renderImportPreview(res, box, ta) {
   box.hidden = false;
   const date = res.date || mealDate.value || todayISO();
   const rows = [];
@@ -360,16 +359,15 @@ function renderImportPreview(res) {
   const total = res.items.reduce((s, i) => s + i.kcal, 0);
   box.innerHTML = `<p class="hint mini"><b>${date}</b> に保存します</p>`
     + rows.join('')
-    + '<button id="paste-save" class="btn-primary btn-block">この内容で保存</button>';
-  box.querySelector('#paste-save').addEventListener('click', () => {
+    + '<button class="paste-save btn-primary btn-block">この内容で保存</button>';
+  box.querySelector('.paste-save').addEventListener('click', () => {
     res.items.forEach((i) => MealDB.add(date, i.name, i.kcal, { slot: res.slot, place: res.place }));
     if (res.weight != null) DB.save(date, res.weight, res.bodyFat != null ? res.bodyFat : '');
     if (res.score != null) ScoreDB.set(date, res.score);
-    $('#paste-text').value = '';
+    ta.value = '';
     box.hidden = true;
     box.innerHTML = '';
-    mealDate.value = date;
-    renderMealDay();
+    if (res.items.length) { mealDate.value = date; renderMealDay(); }
     const bits = [];
     if (res.items.length) bits.push(`食事${res.items.length}件`);
     if (res.weight != null) bits.push('体重');
@@ -378,25 +376,27 @@ function renderImportPreview(res) {
   });
 }
 
-$('#paste-parse').addEventListener('click', () => {
-  renderImportPreview(OcrParse.parseMealTemplate($('#paste-text').value));
-});
-
-$('#clip-import').addEventListener('click', async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (!text || !text.trim()) { showToast('クリップボードが空です'); return; }
-    $('#paste-text').value = text;
-    const details = document.querySelector('.paste-input');
-    if (details) details.open = true;
-    renderImportPreview(OcrParse.parseMealTemplate(text));
-  } catch (err) {
-    console.warn('clipboard読み取り失敗', err);
-    showToast('クリップボードを読めませんでした。貼り付け欄に貼ってください');
-    const details = document.querySelector('.paste-input');
-    if (details) details.open = true;
-  }
-});
+// 貼り付け欄一式（クリップボードボタン・テキスト欄・解析ボタン・プレビュー）を配線する
+function setupImport(prefix) {
+  const ta = $(`#${prefix}-text`);
+  const box = $(`#${prefix}-preview`);
+  $(`#${prefix}-parse`).addEventListener('click', () => {
+    renderImportPreview(OcrParse.parseMealTemplate(ta.value), box, ta);
+  });
+  $(`#${prefix}-clip`).addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text || !text.trim()) { showToast('クリップボードが空です'); return; }
+      ta.value = text;
+      renderImportPreview(OcrParse.parseMealTemplate(text), box, ta);
+    } catch (err) {
+      console.warn('clipboard読み取り失敗', err);
+      showToast('クリップボードを読めませんでした。貼り付け欄に貼ってください');
+    }
+  });
+}
+setupImport('paste');   // 食事タブ
+setupImport('wpaste');  // 体重タブ
 
 $('#free-add').addEventListener('click', () => {
   const name = $('#free-name').value.trim();

@@ -422,11 +422,9 @@ main { padding: 14px; }
 }
 
 /* ---- テキスト貼り付け ---- */
-.paste-input { margin-top: 14px; color: var(--muted); font-size: 14px; }
-.paste-input summary { font-weight: 700; color: var(--accent-2); cursor: pointer; }
-#paste-text {
+.paste-ta {
   width: 100%;
-  margin-top: 8px;
+  margin-top: 4px;
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
@@ -436,7 +434,7 @@ main { padding: 14px; }
   color: var(--text);
   resize: vertical;
 }
-#paste-text:focus { outline: none; border-color: var(--accent); }
+.paste-ta:focus { outline: none; border-color: var(--accent); }
 .paste-preview { margin-top: 8px; }
 .paste-item {
   display: flex;
