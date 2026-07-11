@@ -504,7 +504,30 @@ main { padding: 14px; }
   border-radius: 8px;
 }
 .seg-btn.is-on { background: var(--accent); color: #fff; }
-.cal-seg { margin-bottom: 10px; }
+.cal-controls { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+
+/* ---- 週表示 ---- */
+.week-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.week-nav span { flex: 1; text-align: center; font-size: 15px; font-weight: 800; color: var(--accent-2); }
+.cal-scroll.week { height: auto; overflow-y: visible; }
+.cal-cell.wk { min-height: 170px; }
+.cal-cell.wk .ml { font-size: 10px; white-space: normal; word-break: break-all; }
+
+/* ---- 一覧の操作・複数選択削除 ---- */
+.list-actions { display: flex; gap: 6px; }
+.btn-sm { padding: 8px 12px; font-size: 13px; }
+.del-bar { display: flex; gap: 8px; margin-bottom: 10px; }
+.btn-danger {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--danger);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+}
+.msel { width: 20px; height: 20px; accent-color: var(--danger); flex: none; }
 
 /* ---- 食事タグ・日付見出し ---- */
 .meal-tag {

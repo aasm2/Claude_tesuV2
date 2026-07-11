@@ -755,6 +755,16 @@ function calRange(sorted) {
 }
 
 let calMode = 'weight'; // 'weight' | 'meal'
+let calView = 'month';  // 'month' | 'week'
+let weekStart = null;   // 週表示の開始日（日曜）
+
+function weekStartOf(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - x.getDay());
+  return x;
+}
+
 document.querySelectorAll('#cal-seg .seg-btn').forEach((b) => {
   b.addEventListener('click', () => {
     calMode = b.dataset.mode;
@@ -762,6 +772,36 @@ document.querySelectorAll('#cal-seg .seg-btn').forEach((b) => {
     renderCalendar();
   });
 });
+document.querySelectorAll('#cal-view-seg .seg-btn').forEach((b) => {
+  b.addEventListener('click', () => {
+    calView = b.dataset.view;
+    document.querySelectorAll('#cal-view-seg .seg-btn').forEach((x) => x.classList.toggle('is-on', x === b));
+    renderCalendar();
+  });
+});
+
+function shiftWeek(days) {
+  weekStart.setDate(weekStart.getDate() + days);
+  renderCalendar();
+}
+$('#week-prev').addEventListener('click', () => shiftWeek(-7));
+$('#week-next').addEventListener('click', () => shiftWeek(7));
+$('#week-today').addEventListener('click', () => { weekStart = weekStartOf(new Date()); renderCalendar(); });
+
+// 週表示は左右スワイプで前週/翌週へ
+{
+  let swX = null;
+  let swY = null;
+  const wrap = document.querySelector('.cal-wrap');
+  wrap.addEventListener('touchstart', (e) => { swX = e.touches[0].clientX; swY = e.touches[0].clientY; }, { passive: true });
+  wrap.addEventListener('touchend', (e) => {
+    if (calView !== 'week' || swX == null) return;
+    const dx = e.changedTouches[0].clientX - swX;
+    const dy = e.changedTouches[0].clientY - swY;
+    swX = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) shiftWeek(dx < 0 ? 7 : -7);
+  }, { passive: true });
+}
 
 // その日の食事を「朝 自炊」「夜 外食(店名)」の行にまとめる
 function mealDaySummary(meals) {
@@ -795,7 +835,24 @@ function renderCalendar() {
 
   const cal = $('#calendar');
   cal.innerHTML = '';
-  const { start, end } = calRange(sorted);
+
+  // 表示範囲: 月ビュー=全期間連続 / 週ビュー=選択中の1週間
+  const isWeek = calView === 'week';
+  let start, end;
+  if (isWeek) {
+    if (!weekStart) weekStart = weekStartOf(new Date());
+    start = new Date(weekStart);
+    end = new Date(weekStart);
+    end.setDate(end.getDate() + 6);
+    $('#week-label').textContent =
+      `${start.getMonth() + 1}/${start.getDate()} 〜 ${end.getMonth() + 1}/${end.getDate()}`;
+  } else {
+    ({ start, end } = calRange(sorted));
+  }
+  $('#week-nav').hidden = !isWeek;
+  $('#cal-hint').textContent = isWeek ? '左右スワイプで前後の週へ' : 'スクロールで過去・未来へ連続表示';
+  document.querySelector('.cal-scroll').classList.toggle('week', isWeek);
+
   const today = todayISO();
   const weighted = [];
   let shownMonth = '';
@@ -806,7 +863,7 @@ function renderCalendar() {
     if (cur.getDay() === 0) {
       weekIndex++;
       const mk = `${cur.getFullYear()}-${cur.getMonth()}`;
-      if (mk !== shownMonth) {
+      if (!isWeek && mk !== shownMonth) {
         shownMonth = mk;
         const h = document.createElement('div');
         h.className = 'cal-month';
@@ -818,6 +875,7 @@ function renderCalendar() {
     const dow = cur.getDay();
     const el = document.createElement('div');
     el.className = 'cal-cell'
+      + (isWeek ? ' wk' : '')
       + (iso === today ? ' today' : '')
       + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
     if (calMode === 'meal') {
@@ -848,9 +906,11 @@ function renderCalendar() {
   }
 
   drawCalGraph(weighted);
-  // 最新（今日）が見えるよう一番下までスクロール
-  const sc = document.querySelector('.cal-scroll');
-  if (sc) sc.scrollTop = sc.scrollHeight;
+  // 月ビューは最新（今日）が見えるよう一番下までスクロール
+  if (!isWeek) {
+    const sc = document.querySelector('.cal-scroll');
+    if (sc) sc.scrollTop = sc.scrollHeight;
+  }
 }
 
 // カレンダーの上に体重の折れ線グラフ(SVG)を重ねて描く
@@ -910,15 +970,47 @@ function drawCalGraph(items) {
    一覧 / CSV
    ========================================================= */
 let listMode = 'weight'; // 'weight' | 'meal'
+let mealSelect = false;       // 複数選択モード
+const selMeals = new Set();   // 選択中の食事ID
+
+function updateDelBar() {
+  $('#meal-del-bar').hidden = !mealSelect;
+  $('#meal-del-exec').textContent = `削除（${selMeals.size}件）`;
+  $('#list-select').hidden = listMode !== 'meal' || mealSelect;
+}
+
 document.querySelectorAll('#list-seg .seg-btn').forEach((b) => {
   b.addEventListener('click', () => {
     listMode = b.dataset.mode;
+    mealSelect = false;
+    selMeals.clear();
     document.querySelectorAll('#list-seg .seg-btn').forEach((x) => x.classList.toggle('is-on', x === b));
     renderList();
   });
 });
 
+$('#list-select').addEventListener('click', () => {
+  mealSelect = true;
+  selMeals.clear();
+  renderList();
+});
+$('#meal-del-cancel').addEventListener('click', () => {
+  mealSelect = false;
+  selMeals.clear();
+  renderList();
+});
+$('#meal-del-exec').addEventListener('click', () => {
+  if (!selMeals.size) { showToast('削除する項目を選んでください'); return; }
+  if (!confirm(`${selMeals.size}件の食事を削除しますか？`)) return;
+  [...selMeals].forEach((id) => MealDB.remove(id));
+  mealSelect = false;
+  selMeals.clear();
+  renderList();
+  showToast('削除しました');
+});
+
 function renderList() {
+  updateDelBar();
   if (listMode === 'meal') { renderMealList(); return; }
   const list = DB.all().slice().reverse(); // 新しい順
   const box = $('#list');
@@ -961,8 +1053,9 @@ function renderList() {
   });
 }
 
-// 日付ごとにグループした食事一覧（タップで編集）
+// 日付ごとにグループした食事一覧（タップで編集・選択モードでまとめて削除）
 function renderMealList() {
+  updateDelBar();
   const box = $('#list');
   const empty = $('#list-empty');
   box.innerHTML = '';
@@ -984,16 +1077,30 @@ function renderMealList() {
     }
     const row = document.createElement('div');
     row.className = 'list-row meal-row';
+    const check = mealSelect ? `<input type="checkbox" class="msel" ${selMeals.has(m.id) ? 'checked' : ''} />` : '';
+    const del = mealSelect ? '' : '<button class="ldel" aria-label="削除">🗑</button>';
     row.innerHTML = `
+      ${check}
       <div class="ld">${escapeHtml(m.name)}${mealTagHtml(m)}</div>
       <div><span class="lw">${m.kcal.toLocaleString()}</span><span class="diff"> kcal</span></div>
-      <button class="ldel" aria-label="削除">🗑</button>
+      ${del}
     `;
-    row.querySelector('.ldel').addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (confirm(`「${m.name}」を削除しますか？`)) { MealDB.remove(m.id); renderList(); }
-    });
-    row.querySelector('.ld').addEventListener('click', () => openMealEdit(m.id));
+    if (mealSelect) {
+      const cb = row.querySelector('.msel');
+      const toggle = () => {
+        if (selMeals.has(m.id)) selMeals.delete(m.id); else selMeals.add(m.id);
+        cb.checked = selMeals.has(m.id);
+        updateDelBar();
+      };
+      cb.addEventListener('click', (e) => { e.stopPropagation(); toggle(); cb.checked = selMeals.has(m.id); });
+      row.addEventListener('click', toggle);
+    } else {
+      row.querySelector('.ldel').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(`「${m.name}」を削除しますか？`)) { MealDB.remove(m.id); renderList(); }
+      });
+      row.querySelector('.ld').addEventListener('click', () => openMealEdit(m.id));
+    }
     box.appendChild(row);
   });
 }

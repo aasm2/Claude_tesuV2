@@ -176,9 +176,21 @@
     <!-- ============ カレンダータブ ============ -->
     <section id="tab-calendar" class="tab-panel">
       <div class="card">
-        <div class="seg cal-seg" id="cal-seg">
-          <button class="seg-btn is-on" data-mode="weight">体重</button>
-          <button class="seg-btn" data-mode="meal">食事</button>
+        <div class="cal-controls">
+          <div class="seg" id="cal-seg">
+            <button class="seg-btn is-on" data-mode="weight">体重</button>
+            <button class="seg-btn" data-mode="meal">食事</button>
+          </div>
+          <div class="seg" id="cal-view-seg">
+            <button class="seg-btn is-on" data-view="month">月</button>
+            <button class="seg-btn" data-view="week">週</button>
+          </div>
+        </div>
+        <div class="week-nav" id="week-nav" hidden>
+          <button id="week-prev" class="daybtn">‹</button>
+          <span id="week-label"></span>
+          <button id="week-next" class="daybtn">›</button>
+          <button id="week-today" class="meal-today-btn">今週</button>
         </div>
         <div class="cal-scroll">
           <div class="cal-dow-row">
@@ -195,7 +207,7 @@
             <svg id="cal-graph" class="cal-graph"></svg>
           </div>
         </div>
-        <p class="cal-hint">スクロールで過去・未来へ連続表示</p>
+        <p class="cal-hint" id="cal-hint">スクロールで過去・未来へ連続表示</p>
       </div>
     </section>
 
@@ -207,7 +219,14 @@
             <button class="seg-btn is-on" data-mode="weight">体重</button>
             <button class="seg-btn" data-mode="meal">食事</button>
           </div>
-          <button id="export-btn" class="btn-ghost">CSV出力</button>
+          <div class="list-actions">
+            <button id="list-select" class="btn-ghost btn-sm" hidden>選択</button>
+            <button id="export-btn" class="btn-ghost btn-sm">CSV出力</button>
+          </div>
+        </div>
+        <div id="meal-del-bar" class="del-bar" hidden>
+          <button id="meal-del-exec" class="btn-danger">削除（0件）</button>
+          <button id="meal-del-cancel" class="btn-ghost">キャンセル</button>
         </div>
         <div id="list" class="list"></div>
         <p id="list-empty" class="empty" hidden>まだデータがありません。</p>

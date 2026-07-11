@@ -1,5 +1,5 @@
 /* Service Worker - アプリシェルをキャッシュしてオフライン対応 */
-const CACHE = 'weight-log-v17';
+const CACHE = 'weight-log-v18';
 const ASSETS = [
   './',
   './index.html',
