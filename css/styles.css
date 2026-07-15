@@ -161,7 +161,7 @@ main { padding: 14px; }
   width: 100%;
   min-width: 0;
   padding: 10px 8px;
-  font-size: 15px;
+  font-size: 16px;
   background: var(--card-2);
   border: 1px solid transparent;
   border-radius: 10px;
@@ -202,7 +202,7 @@ main { padding: 14px; }
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: 16px;
 }
 .chart-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
 .chart-box { position: relative; height: 300px; }
@@ -375,7 +375,7 @@ main { padding: 14px; }
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 0 10px;
-  font-size: 15px;
+  font-size: 16px;
 }
 .meal-results { display: flex; flex-direction: column; gap: 6px; }
 .meal-hit {
@@ -402,7 +402,7 @@ main { padding: 14px; }
 .free-row input {
   min-width: 0;
   padding: 10px 12px;
-  font-size: 15px;
+  font-size: 16px;
   background: var(--card-2);
   border: 1px solid transparent;
   border-radius: 10px;
@@ -430,7 +430,7 @@ main { padding: 14px; }
   width: 100%;
   margin-top: 4px;
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   background: var(--card-2);
   border: 1px solid transparent;
