@@ -602,6 +602,15 @@ main { padding: 14px; }
   color: var(--text);
 }
 
+/* ---- 記録タブの区切りラベル ---- */
+.section-label {
+  margin: 4px 2px 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-2);
+}
+.section-label::before { content: '● '; color: var(--accent); }
+
 /* ---- ホーム ---- */
 .home-hero { text-align: center; padding: 22px 18px; }
 .home-date { font-size: 13px; color: var(--muted); }

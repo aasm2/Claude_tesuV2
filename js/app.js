@@ -113,7 +113,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
       p.classList.toggle('is-active', p.id === `tab-${name}`);
     });
     if (name === 'home') renderHome();
-    if (name === 'meal') openMealTab();
+    if (name === 'record') openMealTab();
     if (name === 'graph') renderGraph();
     if (name === 'calendar') renderCalendar();
     if (name === 'list') renderList();
@@ -455,8 +455,7 @@ function setupImport(prefix) {
     }
   });
 }
-setupImport('paste');   // 食事タブ
-setupImport('wpaste');  // 体重タブ
+setupImport('paste');   // 記録タブ（体重・食事共通）
 
 $('#free-add').addEventListener('click', () => {
   const name = $('#free-name').value.trim();
@@ -962,7 +961,7 @@ function renderCalendar() {
         el.classList.add('has-meal');
         const dateISO = iso;
         el.addEventListener('click', () => {
-          switchTab('meal'); // ※タブ切替は日付を今日に戻すので、先に切替えてから目的の日へ
+          switchTab('record'); // ※タブ切替は日付を今日に戻すので、先に切替えてから目的の日へ
           mealDate.value = dateISO;
           renderMealDay();
         });

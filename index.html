@@ -21,11 +21,10 @@
 
   <nav class="tabs" role="tablist">
     <button class="tab is-active" data-tab="home" role="tab">ホーム</button>
-    <button class="tab" data-tab="add" role="tab">体重</button>
-    <button class="tab" data-tab="meal" role="tab">食事</button>
+    <button class="tab" data-tab="record" role="tab">記録</button>
     <button class="tab" data-tab="graph" role="tab">グラフ</button>
     <button class="tab" data-tab="calendar" role="tab">暦</button>
-    <button class="tab" data-tab="list" role="tab">一覧</button>
+    <button class="tab" data-tab="list" role="tab">一覧・設定</button>
   </nav>
 
   <main>
@@ -47,8 +46,7 @@
           <div class="stat"><div class="v" id="home-score">—</div><div class="l">点数</div></div>
         </div>
         <div class="actions home-actions">
-          <button class="btn-primary" data-jump="add">体重を記録</button>
-          <button class="btn-primary" data-jump="meal">食事を記録</button>
+          <button class="btn-primary" data-jump="record">記録する</button>
         </div>
       </div>
 
@@ -62,17 +60,18 @@
       </div>
     </section>
 
-    <!-- ============ 体重タブ ============ -->
-    <section id="tab-add" class="tab-panel">
+    <!-- ============ 記録タブ（体重＋食事を統合） ============ -->
+    <section id="tab-record" class="tab-panel">
       <div class="card">
         <h2>テキストを貼り付けて記録</h2>
-        <p class="hint mini">体重ブロック（体重 54.4／体脂肪 31.3）をここに貼るか、コピー済みならボタンで取り込めます。</p>
-        <button id="wpaste-clip" class="btn-ghost btn-block">📋 クリップボードから取り込み</button>
-        <textarea id="wpaste-text" class="paste-ta" rows="4" placeholder="#体重ログ&#10;2026-07-11&#10;体重 54.4&#10;体脂肪 31.3"></textarea>
-        <button id="wpaste-parse" class="btn-ghost btn-block">解析する</button>
-        <div id="wpaste-preview" class="paste-preview" hidden></div>
+        <p class="hint mini">クロちゃんのブロック（#体重ログ）を貼れば、体重・体脂肪・食事・点数をまとめて取り込めます。コピー済みならボタンで。</p>
+        <button id="paste-clip" class="btn-ghost btn-block">📋 クリップボードから取り込み</button>
+        <textarea id="paste-text" class="paste-ta" rows="5" placeholder="#体重ログ&#10;2026-07-09&#10;時間帯 夜&#10;外食 鳥貴族&#10;焼き鳥5本 450&#10;点数 82"></textarea>
+        <button id="paste-parse" class="btn-ghost btn-block">解析する</button>
+        <div id="paste-preview" class="paste-preview" hidden></div>
       </div>
 
+      <h3 class="section-label">体重</h3>
       <div class="card">
         <h2>スクショから読み取り</h2>
         <p class="hint">ヘルスケア／体組成計アプリの画面を選ぶと、日付と体重を自動で読み取ります。</p>
@@ -111,19 +110,8 @@
         </div>
         <p id="save-msg" class="save-msg" hidden></p>
       </div>
-    </section>
 
-    <!-- ============ 食事タブ ============ -->
-    <section id="tab-meal" class="tab-panel">
-      <div class="card">
-        <h2>テキストを貼り付けて記録</h2>
-        <p class="hint mini">クロちゃんのブロック（#体重ログ）をここに貼るか、コピー済みならボタンで取り込めます。</p>
-        <button id="paste-clip" class="btn-ghost btn-block">📋 クリップボードから取り込み</button>
-        <textarea id="paste-text" class="paste-ta" rows="5" placeholder="#体重ログ&#10;2026-07-09&#10;時間帯 夜&#10;外食 鳥貴族&#10;焼き鳥5本 450&#10;点数 82"></textarea>
-        <button id="paste-parse" class="btn-ghost btn-block">解析する</button>
-        <div id="paste-preview" class="paste-preview" hidden></div>
-      </div>
-
+      <h3 class="section-label">食事</h3>
       <div class="card">
         <h2>食事を記録</h2>
         <p class="hint">料理名で検索してタップすると記録されます。カロリーは1人前の目安です。</p>
