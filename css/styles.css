@@ -55,12 +55,12 @@ body {
 }
 .tab {
   flex: 1;
-  padding: 10px 2px;
+  padding: 10px 1px;
   border: none;
   border-radius: 12px 12px 0 0;
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -601,6 +601,24 @@ main { padding: 14px; }
   border-radius: 12px;
   color: var(--text);
 }
+
+/* ---- ホーム ---- */
+.home-hero { text-align: center; padding: 22px 18px; }
+.home-date { font-size: 13px; color: var(--muted); }
+.home-weight { font-size: 46px; font-weight: 800; color: var(--accent-2); line-height: 1.1; margin: 4px 0; }
+.home-weight small { font-size: 18px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+.home-sub { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.home-diff, .home-goal { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--card-2); color: var(--muted); }
+.home-diff.up { color: var(--danger); }
+.home-diff.down { color: var(--ok); }
+.home-goal { color: var(--accent-2); }
+.home-today-grid { display: flex; gap: 8px; }
+.home-today-grid .stat { flex: 1; }
+.home-today-grid .v { font-size: 20px; }
+.home-today-grid .v.score-text { color: #fff; border-radius: 8px; padding: 2px 0; }
+.home-actions { margin-top: 14px; }
+.home-actions .btn-primary { font-size: 15px; }
+.goal-unit { font-size: 15px; color: var(--muted); }
 
 /* ---- 点数の色分け（80+=緑 / 60+=黄 / 未満=赤） ---- */
 .score-good { background: var(--ok) !important; }

@@ -20,16 +20,50 @@
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab is-active" data-tab="add" role="tab">体重</button>
+    <button class="tab is-active" data-tab="home" role="tab">ホーム</button>
+    <button class="tab" data-tab="add" role="tab">体重</button>
     <button class="tab" data-tab="meal" role="tab">食事</button>
     <button class="tab" data-tab="graph" role="tab">グラフ</button>
-    <button class="tab" data-tab="calendar" role="tab">カレンダー</button>
+    <button class="tab" data-tab="calendar" role="tab">暦</button>
     <button class="tab" data-tab="list" role="tab">一覧</button>
   </nav>
 
   <main>
-    <!-- ============ 追加タブ ============ -->
-    <section id="tab-add" class="tab-panel is-active">
+    <!-- ============ ホーム ============ -->
+    <section id="tab-home" class="tab-panel is-active">
+      <div class="card home-hero">
+        <div class="home-date" id="home-date">—</div>
+        <div class="home-weight"><span id="home-weight">—</span><small>kg</small></div>
+        <div class="home-sub">
+          <span id="home-diff" class="home-diff"></span>
+          <span id="home-goal" class="home-goal"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="graph-head"><h2>今日（<span id="home-today">—</span>）</h2></div>
+        <div class="home-today-grid">
+          <div class="stat"><div class="v" id="home-kcal">—</div><div class="l">摂取カロリー</div></div>
+          <div class="stat"><div class="v" id="home-score">—</div><div class="l">点数</div></div>
+        </div>
+        <div class="actions home-actions">
+          <button class="btn-primary" data-jump="add">体重を記録</button>
+          <button class="btn-primary" data-jump="meal">食事を記録</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="graph-head"><h2>目標体重</h2></div>
+        <div class="meal-day-nav">
+          <input type="number" id="goal-input" step="0.1" inputmode="decimal" placeholder="45" />
+          <span class="goal-unit">kg</span>
+          <button id="goal-save" class="meal-today-btn">設定</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 体重タブ ============ -->
+    <section id="tab-add" class="tab-panel">
       <div class="card">
         <h2>テキストを貼り付けて記録</h2>
         <p class="hint mini">体重ブロック（体重 54.4／体脂肪 31.3）をここに貼るか、コピー済みならボタンで取り込めます。</p>

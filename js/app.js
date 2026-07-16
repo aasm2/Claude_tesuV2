@@ -112,11 +112,68 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.querySelectorAll('.tab-panel').forEach((p) => {
       p.classList.toggle('is-active', p.id === `tab-${name}`);
     });
+    if (name === 'home') renderHome();
     if (name === 'meal') openMealTab();
     if (name === 'graph') renderGraph();
     if (name === 'calendar') renderCalendar();
     if (name === 'list') renderList();
   });
+});
+
+/* =========================================================
+   ホーム（開いてすぐ今日の状態が見える画面）
+   ========================================================= */
+const getGoal = () => parseFloat(localStorage.getItem('goal-weight')) || 45;
+
+function renderHome() {
+  const ws = DB.all();
+  const latest = ws[ws.length - 1];
+  const prev = ws[ws.length - 2];
+  const goal = getGoal();
+
+  if (latest) {
+    $('#home-date').textContent = `${latest.date} の体重`;
+    $('#home-weight').textContent = latest.weight.toFixed(1);
+    if (prev) {
+      const d = latest.weight - prev.weight;
+      const cls = d > 0 ? 'up' : d < 0 ? 'down' : '';
+      $('#home-diff').className = `home-diff ${cls}`;
+      $('#home-diff').textContent = `前回比 ${d > 0 ? '+' : ''}${d.toFixed(1)}kg`;
+    } else {
+      $('#home-diff').textContent = '';
+    }
+    const rem = latest.weight - goal;
+    $('#home-goal').textContent = rem > 0 ? `目標まで あと${rem.toFixed(1)}kg` : '🎉 目標達成';
+  } else {
+    $('#home-date').textContent = 'まだ記録がありません';
+    $('#home-weight').textContent = '—';
+    $('#home-diff').textContent = '';
+    $('#home-goal').textContent = `目標 ${goal}kg`;
+  }
+
+  const today = todayISO();
+  $('#home-today').textContent = today.slice(5).replace('-', '/');
+  const kcal = MealDB.byDate(today).reduce((s, m) => s + m.kcal, 0);
+  $('#home-kcal').textContent = kcal ? `${kcal.toLocaleString()}kcal` : '—';
+  const sc = ScoreDB.get(today);
+  const scEl = $('#home-score');
+  if (sc != null) { scEl.textContent = `${sc}点`; scEl.className = `v ${scoreClass(sc)} score-text`; }
+  else { scEl.textContent = '—'; scEl.className = 'v'; }
+
+  $('#goal-input').value = localStorage.getItem('goal-weight') ? goal : '';
+  $('#goal-input').placeholder = String(goal);
+}
+
+$('#goal-save').addEventListener('click', () => {
+  const g = parseFloat($('#goal-input').value);
+  if (!g || g < 20 || g > 200) { showToast('目標体重を正しく入力してください'); return; }
+  localStorage.setItem('goal-weight', String(g));
+  renderHome();
+  showToast(`目標を ${g}kg に設定しました`);
+});
+
+document.querySelectorAll('[data-jump]').forEach((btn) => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.jump));
 });
 
 /* =========================================================
@@ -1289,3 +1346,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 $('#update-reload').addEventListener('click', () => location.reload());
+
+// 起動時はホームを描画
+renderHome();
