@@ -602,6 +602,48 @@ main { padding: 14px; }
   color: var(--text);
 }
 
+/* ---- 点数の色分け（80+=緑 / 60+=黄 / 未満=赤） ---- */
+.score-good { background: var(--ok) !important; }
+.score-mid { background: #d9a406 !important; }
+.score-bad { background: var(--danger) !important; }
+.mini-score {
+  display: inline-block;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 6px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
+
+/* ---- 更新バナー ---- */
+.update-banner {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--text);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+}
+.update-banner button {
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+
 /* ---- トースト通知 ---- */
 .toast {
   position: fixed;

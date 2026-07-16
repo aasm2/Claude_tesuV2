@@ -67,6 +67,7 @@ const MealDB = {
     const list = this.all();
     const m = list.find((e) => e.id === id);
     if (!m) return;
+    if (fields.date) m.date = fields.date;
     if (fields.name != null) m.name = fields.name;
     if (fields.kcal != null) m.kcal = Math.round(fields.kcal);
     if ('slot' in fields) { if (fields.slot) m.slot = fields.slot; else delete m.slot; }
@@ -100,6 +101,8 @@ const pad = (n) => String(n).padStart(2, '0');
 const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const todayISO = () => toISO(new Date());
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// 点数の良し悪しを色で表す: 80以上=緑 / 60以上=黄 / それ未満=赤
+const scoreClass = (s) => (s >= 80 ? 'score-good' : s >= 60 ? 'score-mid' : 'score-bad');
 
 /* ---------------- タブ切り替え ---------------- */
 document.querySelectorAll('.tab').forEach((tab) => {
@@ -419,7 +422,10 @@ function renderMealDay() {
   const score = ScoreDB.get(date);
   const scoreEl = $('#meal-score');
   scoreEl.hidden = score == null;
-  if (score != null) scoreEl.textContent = `${score}点`;
+  if (score != null) {
+    scoreEl.textContent = `${score}点`;
+    scoreEl.className = `meal-score ${scoreClass(score)}`;
+  }
 
   meals.forEach((m) => {
     const row = document.createElement('div');
@@ -436,14 +442,14 @@ function renderMealDay() {
       MealDB.remove(m.id);
       renderMealDay();
     });
-    row.querySelector('.ld').addEventListener('click', () => openMealEdit(m.id));
+    row.addEventListener('click', () => openMealEdit(m.id)); // 行のどこを押しても編集
     if (m.photoId) {
       const img = row.querySelector('.meal-thumb');
       PhotoStore.get(m.photoId).then((blob) => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
         img.src = url;
-        img.addEventListener('click', () => openPhoto(url));
+        img.addEventListener('click', (e) => { e.stopPropagation(); openPhoto(url); });
       }).catch(() => {});
     }
     box.appendChild(row);
@@ -470,6 +476,7 @@ function openMealEdit(id) {
   const m = MealDB.all().find((e) => e.id === id);
   if (!m) return;
   editingMealId = id;
+  $('#me-date').value = m.date;
   $('#me-name').value = m.name;
   $('#me-kcal').value = m.kcal;
   $('#me-slot').value = m.slot || '';
@@ -483,14 +490,15 @@ $('#me-place').addEventListener('change', () => {
 });
 $('#me-cancel').addEventListener('click', () => { $('#meal-edit').hidden = true; });
 $('#me-save').addEventListener('click', () => {
+  const date = $('#me-date').value;
   const name = $('#me-name').value.trim();
   const kcal = parseFloat($('#me-kcal').value);
-  if (!name || !kcal || kcal <= 0 || kcal > 5000) { showToast('名前とカロリーを確認してください'); return; }
+  if (!date || !name || !kcal || kcal <= 0 || kcal > 5000) { showToast('日付・名前・カロリーを確認してください'); return; }
   const placeType = $('#me-place').value;
   const place = placeType === '外食'
     ? { type: '外食', label: $('#me-label').value.trim() }
     : placeType === '自炊' ? { type: '自炊' } : null;
-  MealDB.update(editingMealId, { name, kcal, slot: $('#me-slot').value || null, place });
+  MealDB.update(editingMealId, { date, name, kcal, slot: $('#me-slot').value || null, place });
   $('#meal-edit').hidden = true;
   renderMealDay();
   if (document.querySelector('#tab-list.is-active')) renderList();
@@ -585,7 +593,10 @@ $('#meal-export').addEventListener('click', () => {
   const list = MealDB.all().sort((a, b) => a.date.localeCompare(b.date));
   if (list.length === 0) { alert('データがありません'); return; }
   const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
-  const csv = 'date,name,kcal\n' + list.map((m) => `${m.date},${esc(m.name)},${m.kcal}`).join('\n');
+  const scores = ScoreDB.all();
+  const csv = 'date,name,kcal,slot,place,label,dayScore\n' + list.map((m) =>
+    `${m.date},${esc(m.name)},${m.kcal},${m.slot || ''},${m.place ? m.place.type : ''},${esc((m.place && m.place.label) || '')},${scores[m.date] ?? ''}`
+  ).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -718,9 +729,16 @@ function renderStats(box, data) {
   const diffCls = diff > 0 ? 'up' : diff < 0 ? 'down' : '';
   const sign = diff > 0 ? '+' : '';
 
+  const goal = parseFloat(localStorage.getItem('goal-weight')) || 45;
+  const rem = latest - goal;
+  const goalHtml = rem > 0
+    ? `<div class="v">あと${rem.toFixed(1)}</div>`
+    : `<div class="v down">達成🎉</div>`;
+
   box.innerHTML = `
     <div class="stat"><div class="v">${latest.toFixed(1)}</div><div class="l">最新 (kg)</div></div>
     <div class="stat"><div class="v ${diffCls}">${sign}${diff.toFixed(1)}</div><div class="l">期間増減</div></div>
+    <div class="stat">${goalHtml}<div class="l">目標 ${goal}kg</div></div>
     <div class="stat"><div class="v">${min.toFixed(1)}</div><div class="l">最小</div></div>
     <div class="stat"><div class="v">${max.toFixed(1)}</div><div class="l">最大</div></div>
   `;
@@ -894,9 +912,9 @@ function renderCalendar() {
       }
     } else {
       const sc = scoreByDate[iso];
-      // 下のオレンジバッジには1日の点数を表示（カロリーはグラフで描く）
+      // 下のバッジには1日の点数を表示（80+緑/60+黄/それ未満赤）。カロリーはグラフで描く
       el.innerHTML = `<span class="d">${cur.getDate()}</span>`
-        + (sc != null ? `<span class="kc">${sc}点</span>` : '');
+        + (sc != null ? `<span class="kc ${scoreClass(sc)}">${sc}点</span>` : '');
     }
     cal.appendChild(el);
     if (calMode !== 'meal') {
@@ -1021,16 +1039,18 @@ function drawKcalGraph(svg, kcalItems, NS) {
     });
   }
 
-  // kcal数値（小さく）
-  kcalItems.forEach((it) => {
-    const t = document.createElementNS(NS, 'text');
-    t.setAttribute('x', it.x);
-    t.setAttribute('y', it.base - it.h - 3);
-    t.setAttribute('text-anchor', 'middle');
-    t.setAttribute('class', 'cg-kcal');
-    t.textContent = it.k.toLocaleString();
-    svg.appendChild(t);
-  });
+  // kcal数値は週表示のみ（月表示は小さすぎて読めないため線と点だけにする）
+  if (calView === 'week') {
+    kcalItems.forEach((it) => {
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', it.x);
+      t.setAttribute('y', it.base - it.h - 3);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('class', 'cg-kcal');
+      t.textContent = it.k.toLocaleString();
+      svg.appendChild(t);
+    });
+  }
 }
 
 
@@ -1140,7 +1160,7 @@ function renderMealList() {
       const sc = scores[curDate];
       const h = document.createElement('div');
       h.className = 'meal-date-head';
-      h.innerHTML = `<span>${curDate}</span><span>${total.toLocaleString()}kcal${sc != null ? ` ・ ${sc}点` : ''}</span>`;
+      h.innerHTML = `<span>${curDate}</span><span>${total.toLocaleString()}kcal${sc != null ? ` <span class="mini-score ${scoreClass(sc)}">${sc}点</span>` : ''}</span>`;
       box.appendChild(h);
     }
     const row = document.createElement('div');
@@ -1167,7 +1187,7 @@ function renderMealList() {
         e.stopPropagation();
         if (confirm(`「${m.name}」を削除しますか？`)) { MealDB.remove(m.id); renderList(); }
       });
-      row.querySelector('.ld').addEventListener('click', () => openMealEdit(m.id));
+      row.addEventListener('click', () => openMealEdit(m.id)); // 行のどこを押しても編集
     }
     box.appendChild(row);
   });
@@ -1186,10 +1206,86 @@ $('#export-btn').addEventListener('click', () => {
 });
 
 /* =========================================================
-   Service Worker 登録（PWA）
+   バックアップ（JSON一括の書き出し・復元）
+   ========================================================= */
+function blobToDataURL(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+$('#bk-export').addEventListener('click', async () => {
+  const data = {
+    app: 'weight-log',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    weights: DB.all(),
+    meals: MealDB.all(),
+    scores: ScoreDB.all(),
+  };
+  if ($('#bk-photos').checked) {
+    data.photos = {};
+    for (const m of MealDB.all()) {
+      if (!m.photoId) continue;
+      const blob = await PhotoStore.get(m.photoId).catch(() => null);
+      if (blob) data.photos[m.photoId] = await blobToDataURL(blob);
+    }
+  }
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `weight-log-backup-${todayISO()}.json`;
+  a.click();
+  showToast('バックアップを書き出しました');
+});
+
+$('#bk-import').addEventListener('change', async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (data.app !== 'weight-log' || !Array.isArray(data.weights) || !Array.isArray(data.meals)) {
+      throw new Error('このアプリのバックアップファイルではありません');
+    }
+    const when = (data.exportedAt || '').slice(0, 10) || '日付不明';
+    if (!confirm(`バックアップ（${when}・体重${data.weights.length}件・食事${data.meals.length}件）で現在のデータを置き換えますか？`)) {
+      e.target.value = '';
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.weights));
+    localStorage.setItem(MEAL_KEY, JSON.stringify(data.meals));
+    localStorage.setItem(SCORE_KEY, JSON.stringify(data.scores || {}));
+    if (data.photos) {
+      for (const [id, dataUrl] of Object.entries(data.photos)) {
+        const blob = await (await fetch(dataUrl)).blob();
+        await PhotoStore.put(id, blob).catch(() => {});
+      }
+    }
+    e.target.value = '';
+    renderList();
+    showToast('復元しました');
+  } catch (err) {
+    console.error(err);
+    alert(`復元できませんでした: ${err.message}`);
+    e.target.value = '';
+  }
+});
+
+/* =========================================================
+   Service Worker 登録（PWA）と更新通知
    ========================================================= */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW登録失敗', e));
+    // 新しいSWに切り替わったら（=新バージョン取得済み）更新バナーを出す
+    let hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) { hadController = true; return; } // 初回インストール時は出さない
+      $('#update-banner').hidden = false;
+    });
   });
 }
+$('#update-reload').addEventListener('click', () => location.reload());
