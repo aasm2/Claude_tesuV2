@@ -630,17 +630,19 @@ main { padding: 14px; }
 .goal-unit { font-size: 15px; color: var(--muted); }
 
 /* ---- 点数の色分け（80+=緑 / 60+=黄 / 未満=赤） ---- */
-.score-good { background: var(--ok) !important; }
-.score-mid { background: #d9a406 !important; }
-.score-bad { background: var(--danger) !important; }
+/* 白文字がしっかり読めるよう、背景は濃いめの色にしている（特に黄=琥珀色） */
+.score-good { background: #15803d !important; }
+.score-mid { background: #b45309 !important; }
+.score-bad { background: #dc2626 !important; }
 .mini-score {
   display: inline-block;
   color: #fff;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
-  border-radius: 6px;
-  padding: 1px 6px;
+  border-radius: 7px;
+  padding: 2px 9px;
   vertical-align: middle;
+  letter-spacing: .02em;
 }
 
 /* ---- 更新バナー ---- */
