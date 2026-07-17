@@ -552,7 +552,10 @@ main { padding: 14px; }
   color: var(--accent-2);
   padding: 10px 2px 2px;
 }
-.meal-date-head span:last-child { color: var(--kcal); }
+/* kcal はオレンジ。ただし直接の子だけに限定して、入れ子の点数バッジ(mini-score)まで
+   色が伝播しないようにする（バッジの文字は白のまま保つ） */
+.meal-date-head > span:last-child { color: var(--kcal); }
+.meal-date-head .mini-score { color: #fff; }
 
 /* ---- カレンダー食事モード ---- */
 .cal-cell .ml {
