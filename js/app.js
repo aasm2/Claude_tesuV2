@@ -116,7 +116,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
     if (name === 'record') openMealTab();
     if (name === 'graph') renderGraph();
     if (name === 'calendar') renderCalendar();
-    if (name === 'list') renderList();
+    if (name === 'list') { renderList(); updateSettingsInputs(); }
   });
 });
 
@@ -124,44 +124,74 @@ document.querySelectorAll('.tab').forEach((tab) => {
    ホーム（開いてすぐ今日の状態が見える画面）
    ========================================================= */
 const getGoal = () => parseFloat(localStorage.getItem('goal-weight')) || 45;
+const getKcalGoal = () => parseInt(localStorage.getItem('kcal-goal'), 10) || 1650;
+const WD = ['日', '月', '火', '水', '木', '金', '土'];
+const fmtDate = (iso) => {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${d.getMonth() + 1}月${d.getDate()}日(${WD[d.getDay()]})`;
+};
+// ヒーローの前回比セル（プラス=薄い赤 / マイナス=薄い緑）
+function setCmp(el, delta, unit) {
+  const s = delta > 0 ? '+' : '';
+  el.textContent = `${s}${delta.toFixed(1)}${unit}`;
+  el.className = 'v' + (delta > 0 ? ' up' : delta < 0 ? ' down' : '');
+}
 
 function renderHome() {
   const ws = DB.all();
   const latest = ws[ws.length - 1];
   const prev = ws[ws.length - 2];
   const goal = getGoal();
+  $('#hm-goal').textContent = `${goal.toFixed(1)}kg`;
 
+  const cmp = $('#hm-cmp');
   if (latest) {
-    $('#home-date').textContent = `${latest.date} の体重`;
-    $('#home-weight').textContent = latest.weight.toFixed(1);
-    if (prev) {
-      const d = latest.weight - prev.weight;
-      const cls = d > 0 ? 'up' : d < 0 ? 'down' : '';
-      $('#home-diff').className = `home-diff ${cls}`;
-      $('#home-diff').textContent = `前回比 ${d > 0 ? '+' : ''}${d.toFixed(1)}kg`;
-    } else {
-      $('#home-diff').textContent = '';
-    }
+    $('#hm-weight').textContent = latest.weight.toFixed(1);
+    $('#hm-date').textContent = `${fmtDate(latest.date)} の記録`;
+    $('#hm-fat').textContent = latest.bodyFat != null ? `${latest.bodyFat.toFixed(1)}%` : '—';
+    cmp.hidden = false;
+    $('#hm-cmp-lbl').textContent = prev ? `前回 ${fmtDate(prev.date)} と比較` : '記録が1件のみ';
+    if (prev) setCmp($('#hm-cmp-w'), latest.weight - prev.weight, 'kg');
+    else { $('#hm-cmp-w').textContent = '—'; $('#hm-cmp-w').className = 'v'; }
+    if (prev && latest.bodyFat != null && prev.bodyFat != null) setCmp($('#hm-cmp-f'), latest.bodyFat - prev.bodyFat, '%');
+    else { $('#hm-cmp-f').textContent = '—'; $('#hm-cmp-f').className = 'v'; }
     const rem = latest.weight - goal;
-    $('#home-goal').textContent = rem > 0 ? `目標まで あと${rem.toFixed(1)}kg` : '🎉 目標達成';
+    $('#hm-cmp-goal').textContent = rem > 0 ? `あと${rem.toFixed(1)}` : '達成🎉';
+    $('#hm-cmp-goal').className = 'v' + (rem > 0 ? '' : ' down');
   } else {
-    $('#home-date').textContent = 'まだ記録がありません';
-    $('#home-weight').textContent = '—';
-    $('#home-diff').textContent = '';
-    $('#home-goal').textContent = `目標 ${goal}kg`;
+    $('#hm-weight').textContent = '—';
+    $('#hm-date').textContent = 'まだ記録がありません';
+    $('#hm-fat').textContent = '—';
+    cmp.hidden = true;
   }
 
+  // 今日の食事
   const today = todayISO();
-  $('#home-today').textContent = today.slice(5).replace('-', '/');
-  const kcal = MealDB.byDate(today).reduce((s, m) => s + m.kcal, 0);
-  $('#home-kcal').textContent = kcal ? `${kcal.toLocaleString()}kcal` : '—';
+  const items = MealDB.byDate(today);
+  const kcal = items.reduce((s, m) => s + m.kcal, 0);
+  const kgoal = getKcalGoal();
+  $('#hm-kcal').textContent = kcal.toLocaleString();
+  $('#hm-kcalgoal').textContent = kgoal.toLocaleString();
+  $('#hm-kbar').style.width = `${Math.min(100, kgoal ? (kcal / kgoal) * 100 : 0)}%`;
+  const rem = kgoal - kcal;
+  $('#hm-kremain').textContent = rem >= 0 ? `残り ${rem.toLocaleString()}kcal` : `${(-rem).toLocaleString()}kcal オーバー`;
+  const out = items.filter((m) => m.place && m.place.type === '外食').length;
+  const home = items.filter((m) => m.place && m.place.type === '自炊').length;
+  $('#hm-kitems').textContent = items.length
+    ? `${items.length}品${out || home ? ` ・ 外食${out}/自炊${home}` : ''}`
+    : '記録なし';
   const sc = ScoreDB.get(today);
-  const scEl = $('#home-score');
-  if (sc != null) { scEl.textContent = `${sc}点`; scEl.className = `v ${scoreClass(sc)} score-text`; }
-  else { scEl.textContent = '—'; scEl.className = 'v'; }
+  const scEl = $('#hm-score');
+  if (sc != null) { scEl.hidden = false; scEl.textContent = `${sc}点`; scEl.className = `badge ${scoreClass(sc)}`; }
+  else scEl.hidden = true;
+}
 
-  $('#goal-input').value = localStorage.getItem('goal-weight') ? goal : '';
-  $('#goal-input').placeholder = String(goal);
+// 設定タブの目標入力に現在値を反映
+function updateSettingsInputs() {
+  $('#goal-input').value = localStorage.getItem('goal-weight') ? getGoal() : '';
+  $('#goal-input').placeholder = String(getGoal());
+  $('#kcal-goal-input').value = localStorage.getItem('kcal-goal') ? getKcalGoal() : '';
+  $('#kcal-goal-input').placeholder = String(getKcalGoal());
 }
 
 $('#goal-save').addEventListener('click', () => {
@@ -170,6 +200,14 @@ $('#goal-save').addEventListener('click', () => {
   localStorage.setItem('goal-weight', String(g));
   renderHome();
   showToast(`目標を ${g}kg に設定しました`);
+});
+
+$('#kcal-goal-save').addEventListener('click', () => {
+  const g = parseInt($('#kcal-goal-input').value, 10);
+  if (!g || g < 500 || g > 6000) { showToast('カロリー目標を正しく入力してください'); return; }
+  localStorage.setItem('kcal-goal', String(g));
+  renderHome();
+  showToast(`カロリー目標を ${g}kcal に設定しました`);
 });
 
 document.querySelectorAll('[data-jump]').forEach((btn) => {
@@ -349,36 +387,7 @@ function showToast(msg) {
    食事（カロリー記録・手動入力式）
    ========================================================= */
 const mealDate = $('#meal-date');
-const mealSearch = $('#meal-search');
-const mealAmount = $('#meal-amount');
-const mealResults = $('#meal-results');
 mealDate.value = todayISO();
-
-// カタカナ→ひらがな変換（検索用）
-const toHira = (s) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
-
-mealSearch.addEventListener('input', () => {
-  const q = toHira(mealSearch.value.trim().toLowerCase());
-  mealResults.innerHTML = '';
-  if (!q) return;
-  const hits = FOODS.filter((f) => f.n.includes(mealSearch.value.trim()) || toHira(f.n).includes(q) || f.r.includes(q)).slice(0, 8);
-  hits.forEach((f) => {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = 'meal-hit';
-    row.innerHTML = `<span class="mh-name">${f.n}</span><span class="mh-kcal">${f.k} kcal</span>`;
-    row.addEventListener('click', () => {
-      const mult = parseFloat(mealAmount.value);
-      const name = mult === 1 ? f.n : `${f.n} ×${mult}`;
-      MealDB.add(mealDate.value, name, f.k * mult);
-      mealSearch.value = '';
-      mealResults.innerHTML = '';
-      renderMealDay();
-    });
-    mealResults.appendChild(row);
-  });
-});
-
 mealDate.addEventListener('change', renderMealDay);
 
 // 食事タブを開くたびに「本当の今日」に合わせる（PWAが起動しっぱなしでも正しい日に記録するため）
@@ -461,7 +470,7 @@ $('#free-add').addEventListener('click', () => {
   const name = $('#free-name').value.trim();
   const kcal = parseFloat($('#free-kcal').value);
   if (!name || !kcal || kcal <= 0 || kcal > 5000) return;
-  MealDB.add(mealDate.value, name, kcal);
+  MealDB.add(mealDate.value, name, kcal, { slot: $('#free-slot').value || undefined });
   $('#free-name').value = '';
   $('#free-kcal').value = '';
   renderMealDay();
@@ -471,8 +480,6 @@ function renderMealDay() {
   const date = mealDate.value || todayISO();
   $('#meal-day-title').textContent = date === todayISO() ? '今日の食事' : `${date} の食事`;
   const meals = MealDB.byDate(date);
-  const box = $('#meal-list');
-  box.innerHTML = '';
   $('#meal-empty').hidden = meals.length > 0;
   $('#meal-total').textContent = meals.reduce((s, m) => s + m.kcal, 0).toLocaleString();
   const score = ScoreDB.get(date);
@@ -482,34 +489,56 @@ function renderMealDay() {
     scoreEl.textContent = `${score}点`;
     scoreEl.className = `meal-score ${scoreClass(score)}`;
   }
+  renderBoard(meals);
+}
 
-  meals.forEach((m) => {
-    const row = document.createElement('div');
-    row.className = 'list-row meal-row';
-    const thumb = m.photoId ? '<img class="meal-thumb" alt="写真" />' : '';
-    row.innerHTML = `
-      ${thumb}
-      <div class="ld">${escapeHtml(m.name)}${mealTagHtml(m)}</div>
-      <div><span class="lw">${m.kcal.toLocaleString()}</span><span class="diff"> kcal</span></div>
-      <button class="ldel" data-id="${m.id}" aria-label="削除">🗑</button>
-    `;
-    row.querySelector('.ldel').addEventListener('click', (e) => {
-      e.stopPropagation();
-      MealDB.remove(m.id);
-      renderMealDay();
+// 朝・昼・夜・間食（＋未分類）を列にしたカンバンを描く
+const BOARD_SLOTS = [['朝', '☀️'], ['昼', '🍚'], ['夜', '🌙'], ['間食', '🍩']];
+const SLOT_NAMES = ['朝', '昼', '夜', '間食'];
+function renderBoard(meals) {
+  const board = $('#meal-board');
+  board.innerHTML = '';
+  const cols = BOARD_SLOTS.map(([name, icon]) => ({ name, icon, items: meals.filter((m) => m.slot === name) }));
+  const un = meals.filter((m) => !m.slot || !SLOT_NAMES.includes(m.slot));
+  if (un.length) cols.push({ name: '未分類', icon: '🍽', items: un });
+
+  cols.forEach((col) => {
+    const sub = col.items.reduce((s, m) => s + m.kcal, 0);
+    const c = document.createElement('div');
+    c.className = 'kb-col';
+    c.innerHTML = `<div class="kb-head"><span class="kb-nm">${col.icon} ${col.name}</span><span class="kb-sub">${sub.toLocaleString()}</span></div>`;
+    const body = document.createElement('div');
+    body.className = 'kb-body';
+    if (!col.items.length) body.innerHTML = '<div class="kb-empty">—</div>';
+    col.items.forEach((m) => {
+      const card = document.createElement('div');
+      card.className = 'kb-card';
+      const thumb = m.photoId ? '<img class="kb-thumb" alt="写真" />' : '';
+      card.innerHTML = `${thumb}<div class="kb-name">${escapeHtml(m.name)}</div>`
+        + `<div class="kb-bot"><span class="kb-kcal">${m.kcal.toLocaleString()}<small>kcal</small></span>${placeTag(m)}</div>`;
+      card.addEventListener('click', () => openMealEdit(m.id));
+      if (m.photoId) {
+        const img = card.querySelector('.kb-thumb');
+        PhotoStore.get(m.photoId).then((blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          img.src = url;
+          img.addEventListener('click', (e) => { e.stopPropagation(); openPhoto(url); });
+        }).catch(() => {});
+      }
+      body.appendChild(card);
     });
-    row.addEventListener('click', () => openMealEdit(m.id)); // 行のどこを押しても編集
-    if (m.photoId) {
-      const img = row.querySelector('.meal-thumb');
-      PhotoStore.get(m.photoId).then((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        img.src = url;
-        img.addEventListener('click', (e) => { e.stopPropagation(); openPhoto(url); });
-      }).catch(() => {});
-    }
-    box.appendChild(row);
+    c.appendChild(body);
+    board.appendChild(c);
   });
+}
+
+// 外食/自炊のタグ（カンバンカード用）
+function placeTag(m) {
+  if (!m.place) return '';
+  const t = m.place.type === '外食' ? `外食${m.place.label ? `(${m.place.label})` : ''}` : '自炊';
+  const cls = m.place.type === '外食' ? 'out' : 'home';
+  return `<span class="kb-tag ${cls}">${escapeHtml(t)}</span>`;
 }
 
 // 食事の時間帯・外食/自炊タグ（小さなラベル）
@@ -545,6 +574,15 @@ $('#me-place').addEventListener('change', () => {
   $('#me-label').parentElement.hidden = $('#me-place').value !== '外食';
 });
 $('#me-cancel').addEventListener('click', () => { $('#meal-edit').hidden = true; });
+$('#me-delete').addEventListener('click', () => {
+  if (!editingMealId) return;
+  if (!confirm('この記録を削除しますか？')) return;
+  MealDB.remove(editingMealId);
+  $('#meal-edit').hidden = true;
+  renderMealDay();
+  if (document.querySelector('#tab-list.is-active')) renderList();
+  showToast('削除しました');
+});
 $('#me-save').addEventListener('click', () => {
   const date = $('#me-date').value;
   const name = $('#me-name').value.trim();
@@ -624,7 +662,7 @@ $('#mp-save').addEventListener('click', async () => {
       photoId = null;
     }
   }
-  MealDB.add(mealDate.value, name, kcal, { photoId });
+  MealDB.add(mealDate.value, name, kcal, { photoId, slot: $('#free-slot').value || undefined });
   resetMealPhoto();
   renderMealDay();
   showToast('記録しました');

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#38bfb0" />
+  <meta name="theme-color" content="#0f9d8f" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="体重ログ" />
@@ -14,266 +14,299 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <header class="app-header">
-    <h1>体重ログ</h1>
-    <p class="subtitle">チャット連携で体重・食事をまとめて記録</p>
-  </header>
-
-  <nav class="tabs" role="tablist">
-    <button class="tab is-active" data-tab="home" role="tab">ホーム</button>
-    <button class="tab" data-tab="record" role="tab">記録</button>
-    <button class="tab" data-tab="graph" role="tab">グラフ</button>
-    <button class="tab" data-tab="calendar" role="tab">暦</button>
-    <button class="tab" data-tab="list" role="tab">一覧・設定</button>
-  </nav>
-
   <main>
     <!-- ============ ホーム ============ -->
     <section id="tab-home" class="tab-panel is-active">
-      <div class="card home-hero">
-        <div class="home-date" id="home-date">—</div>
-        <div class="home-weight"><span id="home-weight">—</span><small>kg</small></div>
-        <div class="home-sub">
-          <span id="home-diff" class="home-diff"></span>
-          <span id="home-goal" class="home-goal"></span>
+      <div class="hero">
+        <div class="hero-top"><span class="hero-title">体重ログ</span></div>
+        <div class="hero-num"><b id="hm-weight">—</b><span class="hero-unit">kg</span></div>
+        <div class="hero-date" id="hm-date">まだ記録がありません</div>
+        <div class="hero-stats">
+          <span class="hs">🎯 目標<b id="hm-goal">45.0kg</b></span>
+          <span class="hs">体脂肪率<b id="hm-fat">—</b></span>
+        </div>
+        <div class="hero-cmp" id="hm-cmp" hidden>
+          <div class="hc-lbl" id="hm-cmp-lbl">前回と比較</div>
+          <div class="hc-row">
+            <div class="hc"><div class="v" id="hm-cmp-w">—</div><div class="cap">体重</div></div>
+            <div class="hc"><div class="v" id="hm-cmp-f">—</div><div class="cap">体脂肪率</div></div>
+            <div class="hc"><div class="v" id="hm-cmp-goal">—</div><div class="cap">目標まで</div></div>
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="graph-head"><h2>今日（<span id="home-today">—</span>）</h2></div>
-        <div class="home-today-grid">
-          <div class="stat"><div class="v" id="home-kcal">—</div><div class="l">摂取カロリー</div></div>
-          <div class="stat"><div class="v" id="home-score">—</div><div class="l">点数</div></div>
-        </div>
-        <div class="actions home-actions">
-          <button class="btn-primary" data-jump="record">記録する</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="graph-head"><h2>目標体重</h2></div>
-        <div class="meal-day-nav">
-          <input type="number" id="goal-input" step="0.1" inputmode="decimal" placeholder="45" />
-          <span class="goal-unit">kg</span>
-          <button id="goal-save" class="meal-today-btn">設定</button>
+      <div class="sec">
+        <div class="card">
+          <h3 class="card-cap">今日の食事 <span id="hm-score" class="badge" hidden></span></h3>
+          <div class="kc-line"><b id="hm-kcal">0</b><span class="kc-goal">/ <span id="hm-kcalgoal">1650</span> kcal</span></div>
+          <div class="kbar"><i id="hm-kbar"></i></div>
+          <div class="kc-meta"><span id="hm-kremain">—</span><span id="hm-kitems">—</span></div>
+          <button class="btn-primary btn-block" data-jump="record" style="margin-top:14px">記録する</button>
         </div>
       </div>
     </section>
 
     <!-- ============ 記録タブ（体重＋食事を統合） ============ -->
     <section id="tab-record" class="tab-panel">
-      <div class="card">
-        <h2>テキストを貼り付けて記録</h2>
-        <p class="hint mini">クロちゃんのブロック（#体重ログ）を貼れば、体重・体脂肪・食事・点数をまとめて取り込めます。コピー済みならボタンで。</p>
-        <button id="paste-clip" class="btn-ghost btn-block">📋 クリップボードから取り込み</button>
-        <textarea id="paste-text" class="paste-ta" rows="5" placeholder="#体重ログ&#10;2026-07-09&#10;時間帯 夜&#10;外食 鳥貴族&#10;焼き鳥5本 450&#10;点数 82"></textarea>
-        <button id="paste-parse" class="btn-ghost btn-block">解析する</button>
-        <div id="paste-preview" class="paste-preview" hidden></div>
-      </div>
-
-      <h3 class="section-label">体重</h3>
-      <div class="card">
-        <h2>スクショから読み取り</h2>
-        <p class="hint">ヘルスケア／体組成計アプリの画面を選ぶと、日付と体重を自動で読み取ります。</p>
-
-        <button id="manual-btn" class="btn-ghost btn-block">✏️ 手動で入力する</button>
-        <label class="filebtn">
-          <input type="file" id="file-input" accept="image/*" />
-          <span>📷 スクショを選ぶ</span>
-        </label>
-
-        <div id="preview-wrap" class="preview-wrap" hidden>
-          <img id="preview" alt="プレビュー" />
+      <div class="page-head">記録</div>
+      <div class="sec">
+        <div class="card">
+          <h2>テキストを貼り付けて記録</h2>
+          <p class="hint mini">クロちゃんのブロック（#体重ログ）を貼れば、体重・体脂肪・食事・点数をまとめて取り込めます。コピー済みならボタンで。</p>
+          <button id="paste-clip" class="btn-ghost btn-block">📋 クリップボードから取り込み</button>
+          <textarea id="paste-text" class="paste-ta" rows="5" placeholder="#体重ログ&#10;2026-07-09&#10;時間帯 夜&#10;外食 鳥貴族&#10;焼き鳥5本 450&#10;点数 82"></textarea>
+          <button id="paste-parse" class="btn-ghost btn-block">解析する</button>
+          <div id="paste-preview" class="paste-preview" hidden></div>
         </div>
 
-        <div id="ocr-status" class="ocr-status" hidden>
-          <div class="spinner"></div>
-          <span id="ocr-status-text">読み取り中…</span>
-          <div class="progress"><div id="ocr-progress" class="progress-bar"></div></div>
-        </div>
+        <h3 class="section-label">体重</h3>
+        <div class="card">
+          <h2>スクショから読み取り</h2>
+          <p class="hint">ヘルスケア／体組成計アプリの画面を選ぶと、日付と体重を自動で読み取ります。</p>
 
-        <details id="ocr-raw-wrap" class="ocr-raw" hidden>
-          <summary>OCRの生テキストを見る</summary>
-          <pre id="ocr-raw"></pre>
-        </details>
-      </div>
+          <button id="manual-btn" class="btn-ghost btn-block">✏️ 手動で入力する</button>
+          <label class="filebtn">
+            <input type="file" id="file-input" accept="image/*" />
+            <span>📷 スクショを選ぶ</span>
+          </label>
 
-      <div id="confirm-card" class="card" hidden>
-        <h2>確認して保存</h2>
-        <p class="hint">読み取り結果を確認・修正してください。複数見つかった場合は、保存したい記録にチェックを入れてください。</p>
-        <div class="entry-head"><span></span><span>日付</span><span>体重(kg)</span><span>体脂肪(%)</span></div>
-        <div id="entry-rows" class="entry-rows"></div>
-        <button id="add-row-btn" class="btn-ghost btn-block">＋ 行を追加</button>
-        <div class="actions">
-          <button id="save-btn" class="btn-primary">保存</button>
-          <button id="clear-btn" class="btn-ghost">クリア</button>
-        </div>
-        <p id="save-msg" class="save-msg" hidden></p>
-      </div>
-
-      <h3 class="section-label">食事</h3>
-      <div class="card">
-        <h2>食事を記録</h2>
-        <p class="hint">料理名で検索してタップすると記録されます。カロリーは1人前の目安です。</p>
-        <label class="meal-date-label">記録する日</label>
-        <div class="meal-day-nav">
-          <button id="meal-prev" class="daybtn" aria-label="前日">‹</button>
-          <input type="date" id="meal-date" />
-          <button id="meal-next" class="daybtn" aria-label="翌日">›</button>
-          <button id="meal-today" class="meal-today-btn">今日</button>
-        </div>
-        <div class="meal-search-row">
-          <input type="search" id="meal-search" placeholder="例: ごはん、からあげ、ビール" />
-          <select id="meal-amount" aria-label="量">
-            <option value="0.5">×0.5</option>
-            <option value="1" selected>×1</option>
-            <option value="1.5">×1.5</option>
-            <option value="2">×2</option>
-          </select>
-        </div>
-        <div id="meal-results" class="meal-results"></div>
-        <details class="free-input">
-          <summary>リストにない料理を手入力</summary>
-          <div class="free-row">
-            <input type="text" id="free-name" placeholder="料理名" />
-            <input type="number" id="free-kcal" placeholder="kcal" inputmode="numeric" />
-            <button id="free-add" class="btn-ghost">追加</button>
+          <div id="preview-wrap" class="preview-wrap" hidden>
+            <img id="preview" alt="プレビュー" />
           </div>
-        </details>
 
-        <label class="filebtn mt">
-          <input type="file" id="meal-photo-input" accept="image/*" />
-          <span>📷 写真で記録（食事・栄養表示）</span>
-        </label>
-        <p class="hint mini">食事や栄養成分表示を撮ると、栄養表示ならカロリーを自動で読み取ります。写真も保存できます。</p>
+          <div id="ocr-status" class="ocr-status" hidden>
+            <div class="spinner"></div>
+            <span id="ocr-status-text">読み取り中…</span>
+            <div class="progress"><div id="ocr-progress" class="progress-bar"></div></div>
+          </div>
 
-        <div id="meal-photo-status" class="ocr-status" hidden>
-          <div class="spinner"></div>
-          <span id="meal-photo-status-text">読み取り中…</span>
+          <details id="ocr-raw-wrap" class="ocr-raw" hidden>
+            <summary>OCRの生テキストを見る</summary>
+            <pre id="ocr-raw"></pre>
+          </details>
         </div>
 
-        <div id="meal-photo-confirm" class="mp-confirm" hidden>
-          <img id="meal-photo-preview" alt="プレビュー" />
-          <div class="field">
-            <label for="mp-name">名前</label>
-            <input type="text" id="mp-name" placeholder="例: ハンバーグ弁当" />
-          </div>
-          <div class="field">
-            <label for="mp-kcal">カロリー (kcal)</label>
-            <input type="number" id="mp-kcal" inputmode="numeric" placeholder="480" />
-          </div>
-          <label class="mp-keep"><input type="checkbox" id="mp-keep" checked /> この写真を保存して後で見返す</label>
+        <div id="confirm-card" class="card" hidden>
+          <h2>確認して保存</h2>
+          <p class="hint">読み取り結果を確認・修正してください。複数見つかった場合は、保存したい記録にチェックを入れてください。</p>
+          <div class="entry-head"><span></span><span>日付</span><span>体重(kg)</span><span>体脂肪(%)</span></div>
+          <div id="entry-rows" class="entry-rows"></div>
+          <button id="add-row-btn" class="btn-ghost btn-block">＋ 行を追加</button>
           <div class="actions">
-            <button id="mp-save" class="btn-primary">記録</button>
-            <button id="mp-cancel" class="btn-ghost">やめる</button>
+            <button id="save-btn" class="btn-primary">保存</button>
+            <button id="clear-btn" class="btn-ghost">クリア</button>
           </div>
+          <p id="save-msg" class="save-msg" hidden></p>
         </div>
-      </div>
-      <div class="card">
-        <div class="graph-head">
-          <h2 id="meal-day-title">この日の食事</h2>
-          <div class="meal-meta">
-            <span class="meal-total"><span id="meal-total">0</span> kcal</span>
-            <span id="meal-score" class="meal-score" hidden></span>
+
+        <h3 class="section-label">食事</h3>
+        <div class="card">
+          <div class="meal-day-nav">
+            <button id="meal-prev" class="daybtn" aria-label="前日">‹</button>
+            <input type="date" id="meal-date" />
+            <button id="meal-next" class="daybtn" aria-label="翌日">›</button>
+            <button id="meal-today" class="meal-today-btn">今日</button>
           </div>
+          <div class="board-head">
+            <h2 id="meal-day-title">今日の食事</h2>
+            <div class="meal-meta">
+              <span class="meal-total"><span id="meal-total">0</span> kcal</span>
+              <span id="meal-score" class="meal-score" hidden></span>
+            </div>
+          </div>
+          <div id="meal-board" class="kanban"></div>
+          <p id="meal-empty" class="empty" hidden>まだ記録がありません。上の貼り付けから取り込めます。</p>
+
+          <details class="free-input add-tools">
+            <summary>手入力・写真で追加</summary>
+            <div class="free-slot-row">
+              <label for="free-slot">時間帯</label>
+              <select id="free-slot" class="modal-select">
+                <option value="">未分類</option>
+                <option value="朝">朝</option>
+                <option value="昼">昼</option>
+                <option value="夜">夜</option>
+                <option value="間食">間食</option>
+              </select>
+            </div>
+            <div class="free-row">
+              <input type="text" id="free-name" placeholder="料理名" />
+              <input type="number" id="free-kcal" placeholder="kcal" inputmode="numeric" />
+              <button id="free-add" class="btn-ghost">追加</button>
+            </div>
+
+            <label class="filebtn mt">
+              <input type="file" id="meal-photo-input" accept="image/*" />
+              <span>📷 写真で記録（食事・栄養表示）</span>
+            </label>
+            <p class="hint mini">食事や栄養成分表示を撮ると、栄養表示ならカロリーを自動で読み取ります。写真も保存できます。</p>
+
+            <div id="meal-photo-status" class="ocr-status" hidden>
+              <div class="spinner"></div>
+              <span id="meal-photo-status-text">読み取り中…</span>
+            </div>
+
+            <div id="meal-photo-confirm" class="mp-confirm" hidden>
+              <img id="meal-photo-preview" alt="プレビュー" />
+              <div class="field">
+                <label for="mp-name">名前</label>
+                <input type="text" id="mp-name" placeholder="例: ハンバーグ弁当" />
+              </div>
+              <div class="field">
+                <label for="mp-kcal">カロリー (kcal)</label>
+                <input type="number" id="mp-kcal" inputmode="numeric" placeholder="480" />
+              </div>
+              <label class="mp-keep"><input type="checkbox" id="mp-keep" checked /> この写真を保存して後で見返す</label>
+              <div class="actions">
+                <button id="mp-save" class="btn-primary">記録</button>
+                <button id="mp-cancel" class="btn-ghost">やめる</button>
+              </div>
+            </div>
+          </details>
+          <button id="meal-export" class="btn-ghost btn-block">食事CSV出力</button>
         </div>
-        <div id="meal-list" class="list"></div>
-        <p id="meal-empty" class="empty" hidden>まだ記録がありません。</p>
-        <button id="meal-export" class="btn-ghost btn-block">食事CSV出力</button>
       </div>
     </section>
 
     <!-- ============ グラフタブ ============ -->
     <section id="tab-graph" class="tab-panel">
-      <div class="card">
-        <div class="graph-head">
-          <h2>体重の推移</h2>
-          <select id="range-select" class="range-select">
-            <option value="7">直近1週間</option>
-            <option value="30">直近30日</option>
-            <option value="90">直近90日</option>
-            <option value="180">直近180日</option>
-            <option value="365">直近1年</option>
-            <option value="0" selected>すべて</option>
-          </select>
+      <div class="page-head">グラフ</div>
+      <div class="sec">
+        <div class="card">
+          <div class="graph-head">
+            <h2>体重の推移</h2>
+            <select id="range-select" class="range-select">
+              <option value="7">直近1週間</option>
+              <option value="30">直近30日</option>
+              <option value="90">直近90日</option>
+              <option value="180">直近180日</option>
+              <option value="365">直近1年</option>
+              <option value="0" selected>すべて</option>
+            </select>
+          </div>
+          <div class="chart-scroll"><div class="chart-box"><canvas id="line-chart"></canvas></div></div>
+          <div id="graph-stats" class="stats"></div>
+          <p id="graph-empty" class="empty" hidden>まだデータがありません。「記録」から追加しましょう。</p>
         </div>
-        <div class="chart-scroll"><div class="chart-box"><canvas id="line-chart"></canvas></div></div>
-        <div id="graph-stats" class="stats"></div>
-        <p id="graph-empty" class="empty" hidden>まだデータがありません。「追加」から記録しましょう。</p>
       </div>
     </section>
 
     <!-- ============ カレンダータブ ============ -->
     <section id="tab-calendar" class="tab-panel">
-      <div class="card">
-        <div class="cal-controls">
-          <div class="seg" id="cal-seg">
-            <button class="seg-btn is-on" data-mode="weight">体重</button>
-            <button class="seg-btn" data-mode="meal">食事</button>
+      <div class="page-head">暦</div>
+      <div class="sec">
+        <div class="card">
+          <div class="cal-controls">
+            <div class="seg" id="cal-seg">
+              <button class="seg-btn is-on" data-mode="weight">体重</button>
+              <button class="seg-btn" data-mode="meal">食事</button>
+            </div>
+            <div class="seg" id="cal-view-seg">
+              <button class="seg-btn is-on" data-view="month">月</button>
+              <button class="seg-btn" data-view="week">週</button>
+            </div>
           </div>
-          <div class="seg" id="cal-view-seg">
-            <button class="seg-btn is-on" data-view="month">月</button>
-            <button class="seg-btn" data-view="week">週</button>
+          <div class="week-nav" id="week-nav" hidden>
+            <button id="week-prev" class="daybtn">‹</button>
+            <span id="week-label"></span>
+            <button id="week-next" class="daybtn">›</button>
+            <button id="week-today" class="meal-today-btn">今週</button>
           </div>
+          <div class="cal-scroll">
+            <div class="cal-dow-row">
+              <span class="cal-dow sun">日</span>
+              <span class="cal-dow">月</span>
+              <span class="cal-dow">火</span>
+              <span class="cal-dow">水</span>
+              <span class="cal-dow">木</span>
+              <span class="cal-dow">金</span>
+              <span class="cal-dow sat">土</span>
+            </div>
+            <div class="cal-wrap">
+              <div id="calendar" class="calendar"></div>
+              <svg id="cal-graph" class="cal-graph"></svg>
+            </div>
+          </div>
+          <p class="cal-hint" id="cal-hint">スクロールで過去・未来へ連続表示</p>
         </div>
-        <div class="week-nav" id="week-nav" hidden>
-          <button id="week-prev" class="daybtn">‹</button>
-          <span id="week-label"></span>
-          <button id="week-next" class="daybtn">›</button>
-          <button id="week-today" class="meal-today-btn">今週</button>
-        </div>
-        <div class="cal-scroll">
-          <div class="cal-dow-row">
-            <span class="cal-dow sun">日</span>
-            <span class="cal-dow">月</span>
-            <span class="cal-dow">火</span>
-            <span class="cal-dow">水</span>
-            <span class="cal-dow">木</span>
-            <span class="cal-dow">金</span>
-            <span class="cal-dow sat">土</span>
-          </div>
-          <div class="cal-wrap">
-            <div id="calendar" class="calendar"></div>
-            <svg id="cal-graph" class="cal-graph"></svg>
-          </div>
-        </div>
-        <p class="cal-hint" id="cal-hint">スクロールで過去・未来へ連続表示</p>
       </div>
     </section>
 
-    <!-- ============ 一覧タブ ============ -->
+    <!-- ============ 一覧・設定タブ ============ -->
     <section id="tab-list" class="tab-panel">
-      <div class="card">
-        <div class="graph-head">
-          <div class="seg" id="list-seg">
-            <button class="seg-btn is-on" data-mode="weight">体重</button>
-            <button class="seg-btn" data-mode="meal">食事</button>
+      <div class="page-head">一覧・設定</div>
+      <div class="sec">
+        <div class="card">
+          <div class="graph-head">
+            <div class="seg" id="list-seg">
+              <button class="seg-btn is-on" data-mode="weight">体重</button>
+              <button class="seg-btn" data-mode="meal">食事</button>
+            </div>
+            <div class="list-actions">
+              <button id="list-select" class="btn-ghost btn-sm" hidden>選択</button>
+              <button id="export-btn" class="btn-ghost btn-sm">CSV出力</button>
+            </div>
           </div>
-          <div class="list-actions">
-            <button id="list-select" class="btn-ghost btn-sm" hidden>選択</button>
-            <button id="export-btn" class="btn-ghost btn-sm">CSV出力</button>
+          <div id="meal-del-bar" class="del-bar" hidden>
+            <button id="meal-del-exec" class="btn-danger">削除（0件）</button>
+            <button id="meal-del-cancel" class="btn-ghost">キャンセル</button>
           </div>
+          <div id="list" class="list"></div>
+          <p id="list-empty" class="empty" hidden>まだデータがありません。</p>
         </div>
-        <div id="meal-del-bar" class="del-bar" hidden>
-          <button id="meal-del-exec" class="btn-danger">削除（0件）</button>
-          <button id="meal-del-cancel" class="btn-ghost">キャンセル</button>
-        </div>
-        <div id="list" class="list"></div>
-        <p id="list-empty" class="empty" hidden>まだデータがありません。</p>
-      </div>
 
-      <div class="card">
-        <h2>バックアップ</h2>
-        <p class="hint mini">全データ（体重・体脂肪・食事・点数）をファイルに保存／復元します。iPhoneの「ファイル」アプリでiCloudに保存しておくと、端末やブラウザのデータが消えても戻せます。</p>
-        <label class="mp-keep"><input type="checkbox" id="bk-photos" /> 写真も含める（ファイルが大きくなります）</label>
-        <button id="bk-export" class="btn-primary btn-block">バックアップを書き出す</button>
-        <label class="filebtn">
-          <input type="file" id="bk-import" accept=".json,application/json" />
-          <span>📂 バックアップから復元</span>
-        </label>
+        <div class="card">
+          <h2>目標</h2>
+          <div class="setting-row">
+            <label for="goal-input">目標体重</label>
+            <input type="number" id="goal-input" step="0.1" inputmode="decimal" placeholder="45" />
+            <span class="unit">kg</span>
+            <button id="goal-save">設定</button>
+          </div>
+          <div class="setting-row">
+            <label for="kcal-goal-input">1日のカロリー目標</label>
+            <input type="number" id="kcal-goal-input" inputmode="numeric" placeholder="1650" />
+            <span class="unit">kcal</span>
+            <button id="kcal-goal-save">設定</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>バックアップ</h2>
+          <p class="hint mini">全データ（体重・体脂肪・食事・点数）をファイルに保存／復元します。iPhoneの「ファイル」アプリでiCloudに保存しておくと、端末やブラウザのデータが消えても戻せます。</p>
+          <label class="mp-keep"><input type="checkbox" id="bk-photos" /> 写真も含める（ファイルが大きくなります）</label>
+          <button id="bk-export" class="btn-primary btn-block">バックアップを書き出す</button>
+          <label class="filebtn">
+            <input type="file" id="bk-import" accept=".json,application/json" />
+            <span>📂 バックアップから復元</span>
+          </label>
+        </div>
       </div>
     </section>
   </main>
+
+  <nav class="botnav" role="tablist">
+    <button class="tab is-active" data-tab="home" role="tab" aria-label="ホーム">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>
+      <span>ホーム</span>
+    </button>
+    <button class="tab" data-tab="record" role="tab" aria-label="記録">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17z"/></svg>
+      <span>記録</span>
+    </button>
+    <button class="tab" data-tab="graph" role="tab" aria-label="グラフ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V6M4 20h16M8 20v-6M12 20v-9M16 20v-4"/></svg>
+      <span>グラフ</span>
+    </button>
+    <button class="tab" data-tab="calendar" role="tab" aria-label="暦">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg>
+      <span>暦</span>
+    </button>
+    <button class="tab" data-tab="list" role="tab" aria-label="一覧・設定">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+      <span>一覧</span>
+    </button>
+  </nav>
 
   <div id="meal-edit" class="modal" hidden>
     <div class="modal-card">
@@ -302,6 +335,7 @@
         <button id="me-save" class="btn-primary">保存</button>
         <button id="me-cancel" class="btn-ghost">キャンセル</button>
       </div>
+      <button id="me-delete" class="btn-ghost btn-block del-link">この記録を削除</button>
     </div>
   </div>
 
