@@ -201,6 +201,20 @@ async function sendChat() {
   const recTab = document.querySelector('.tab[data-tab="record"]');
   if (recTab) recTab.addEventListener('click', () => { refreshChatKeyState(); renderChat(); });
 
+  // 「設定（APIキー）を開く」→ 一覧・設定タブへ切替え、AIカードまでスクロール
+  const openSettings = chatEl('chat-open-settings');
+  if (openSettings) {
+    openSettings.addEventListener('click', () => {
+      if (typeof switchTab === 'function') switchTab('list');
+      setTimeout(() => {
+        const card = chatEl('ai-settings-card');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const inp = chatEl('api-key-input');
+        if (inp) inp.focus({ preventScroll: true });
+      }, 80);
+    });
+  }
+
   // 設定：APIキー・モデルの保存
   const keySave = chatEl('api-key-save');
   if (keySave) {

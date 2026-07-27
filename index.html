@@ -55,7 +55,7 @@
           <p class="hint mini">食べたものや体重を話しかけると、クロちゃんが記録用に整えてくれます。返信の下に出る「この内容で保存」で取り込めます。</p>
           <div id="chat-nokey" class="chat-nokey" hidden>
             <p class="hint">設定でAnthropicのAPIキーを登録すると、ここでクロちゃんと直接話せます。</p>
-            <button class="btn-ghost btn-block" data-jump="list">設定を開く</button>
+            <button id="chat-open-settings" class="btn-ghost btn-block">設定（APIキー）を開く</button>
           </div>
           <div id="chat-log" class="chat-log"></div>
           <div class="chat-input-row">
@@ -285,7 +285,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="ai-settings-card">
           <h2>クロちゃんチャット (AI連携)</h2>
           <p class="hint mini">AnthropicのAPIキーを登録すると、記録タブでクロちゃんと直接会話でき、食事・体重を自動で取り込めます。キーはこの端末のブラウザにのみ保存され、Anthropic API以外には送られません。従量課金（別料金）が発生します。キーの取得: console.anthropic.com</p>
           <div class="field"><label for="api-key-input">Anthropic APIキー</label>
