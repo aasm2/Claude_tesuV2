@@ -192,6 +192,7 @@ function updateSettingsInputs() {
   $('#goal-input').placeholder = String(getGoal());
   $('#kcal-goal-input').value = localStorage.getItem('kcal-goal') ? getKcalGoal() : '';
   $('#kcal-goal-input').placeholder = String(getKcalGoal());
+  if (typeof updateAiSettings === 'function') updateAiSettings();
 }
 
 $('#goal-save').addEventListener('click', () => {

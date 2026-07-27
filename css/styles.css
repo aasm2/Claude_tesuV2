@@ -698,6 +698,24 @@ main { padding: 0; }
 /* ---- モーダル内の削除リンク ---- */
 .del-link { color: var(--danger); border-color: transparent; margin-top: 4px; }
 
+/* ---- クロちゃんチャット ---- */
+.ai-badge { font-size: 10px; font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-radius: 6px; padding: 2px 6px; vertical-align: middle; margin-left: 4px; }
+.chat-nokey { text-align: center; padding: 8px 0 4px; }
+.chat-log { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 2px; }
+.chat-hello { text-align: center; color: var(--muted); font-size: 13px; padding: 16px 8px; }
+.chat-bubble { max-width: 85%; padding: 10px 13px; border-radius: 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.chat-bubble.user { align-self: flex-end; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border-bottom-right-radius: 5px; }
+.chat-bubble.assistant { align-self: flex-start; background: var(--card-2); color: var(--text); border-bottom-left-radius: 5px; }
+.chat-bubble.typing { color: var(--muted); font-style: italic; }
+.chat-save { align-self: flex-start; width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-top: -2px; }
+.chat-save .paste-item { background: var(--card-2); }
+.chat-save-btn.done { background: var(--ok); }
+.chat-input-row { display: flex; gap: 8px; align-items: flex-end; margin-top: 10px; }
+.chat-input { flex: 1; min-width: 0; padding: 10px 12px; font-size: 16px; font-family: inherit; background: var(--card-2); border: 1px solid transparent; border-radius: 12px; color: var(--text); resize: none; }
+.chat-input:focus { outline: none; border-color: var(--accent); }
+.chat-send { flex: none; align-self: stretch; padding: 0 18px; border: none; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 800; font-size: 15px; }
+.chat-send:active { filter: brightness(.94); }
+
 /* ---- 点数の色分け（80+=緑 / 60+=黄 / 未満=赤） ---- */
 /* 白文字がしっかり読めるよう、背景は濃いめの色にしている（特に黄=琥珀色） */
 .score-good { background: #15803d !important; }

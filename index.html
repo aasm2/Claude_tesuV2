@@ -50,6 +50,20 @@
     <section id="tab-record" class="tab-panel">
       <div class="page-head">記録</div>
       <div class="sec">
+        <div class="card" id="chat-card">
+          <h2>クロちゃんに相談 <span class="ai-badge">AI</span></h2>
+          <p class="hint mini">食べたものや体重を話しかけると、クロちゃんが記録用に整えてくれます。返信の下に出る「この内容で保存」で取り込めます。</p>
+          <div id="chat-nokey" class="chat-nokey" hidden>
+            <p class="hint">設定でAnthropicのAPIキーを登録すると、ここでクロちゃんと直接話せます。</p>
+            <button class="btn-ghost btn-block" data-jump="list">設定を開く</button>
+          </div>
+          <div id="chat-log" class="chat-log"></div>
+          <div class="chat-input-row">
+            <textarea id="chat-input" class="chat-input" rows="2" placeholder="例: お昼に鳥貴族で焼き鳥5本食べたよ"></textarea>
+            <button id="chat-send" class="chat-send" aria-label="送信">送信</button>
+          </div>
+        </div>
+
         <div class="card">
           <h2>テキストを貼り付けて記録</h2>
           <p class="hint mini">クロちゃんのブロック（#体重ログ）を貼れば、体重・体脂肪・食事・点数をまとめて取り込めます。コピー済みならボタンで。</p>
@@ -272,6 +286,22 @@
         </div>
 
         <div class="card">
+          <h2>クロちゃんチャット (AI連携)</h2>
+          <p class="hint mini">AnthropicのAPIキーを登録すると、記録タブでクロちゃんと直接会話でき、食事・体重を自動で取り込めます。キーはこの端末のブラウザにのみ保存され、Anthropic API以外には送られません。従量課金（別料金）が発生します。キーの取得: console.anthropic.com</p>
+          <div class="field"><label for="api-key-input">Anthropic APIキー</label>
+            <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" /></div>
+          <div class="field"><label for="ai-model">モデル</label>
+            <select id="ai-model" class="modal-select">
+              <option value="claude-opus-5">Opus 5（高性能）</option>
+              <option value="claude-sonnet-5">Sonnet 5（バランス・安め）</option>
+              <option value="claude-haiku-4-5">Haiku 4.5（軽量・最安）</option>
+            </select>
+          </div>
+          <button id="api-key-save" class="btn-primary btn-block">保存</button>
+          <p class="hint mini" id="api-key-status"></p>
+        </div>
+
+        <div class="card">
           <h2>バックアップ</h2>
           <p class="hint mini">全データ（体重・体脂肪・食事・点数）をファイルに保存／復元します。iPhoneの「ファイル」アプリでiCloudに保存しておくと、端末やブラウザのデータが消えても戻せます。</p>
           <label class="mp-keep"><input type="checkbox" id="bk-photos" /> 写真も含める（ファイルが大きくなります）</label>
@@ -356,5 +386,6 @@
   <script src="js/foods.js"></script>
   <script src="js/idb.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/chat.js"></script>
 </body>
 </html>

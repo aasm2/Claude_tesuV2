@@ -1,5 +1,5 @@
 /* Service Worker - アプリシェルをキャッシュしてオフライン対応 */
-const CACHE = 'weight-log-v28';
+const CACHE = 'weight-log-v29';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './js/parse.js',
   './js/foods.js',
   './js/idb.js',
+  './js/chat.js',
   './vendor/chart.umd.js',
   './vendor/tesseract.min.js',
   './vendor/worker.min.js',
