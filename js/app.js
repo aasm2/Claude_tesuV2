@@ -846,21 +846,30 @@ function renderStats(box, data) {
 function calRange(sorted) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  let start;
-  if (sorted.length) {
-    start = new Date(`${sorted[0].date}T00:00:00`);
-  } else {
-    start = new Date(today);
-    start.setDate(start.getDate() - 28);
+
+  // 体重だけでなく食事の日付も範囲に含める（食事しか無い日が切れないように）
+  const dates = sorted.map((e) => e.date).concat(Object.keys(MealDB.totals()));
+  dates.sort();
+
+  // 記録が少なくてもカレンダーとして成立するよう、最低8週間ぶんは必ず表示する
+  const minStart = new Date(today);
+  minStart.setDate(minStart.getDate() - 56);
+  let start = minStart;
+  if (dates.length) {
+    const oldest = new Date(`${dates[0]}T00:00:00`);
+    if (oldest < start) start = oldest;
   }
+
   const limit = new Date(today); // 過去は最大およそ18か月まで（DOM肥大防止）
   limit.setDate(limit.getDate() - 550);
   if (start < limit) start = limit;
+  start = new Date(start);
   start.setDate(start.getDate() - start.getDay()); // その週の日曜へ
+
   // 終端は「今日」と「最新の記録」の遅い方の週の土曜まで
   let end = new Date(today);
-  if (sorted.length) {
-    const last = new Date(`${sorted[sorted.length - 1].date}T00:00:00`);
+  if (dates.length) {
+    const last = new Date(`${dates[dates.length - 1]}T00:00:00`);
     if (last > end) end = last;
   }
   end.setDate(end.getDate() + (6 - end.getDay()));
